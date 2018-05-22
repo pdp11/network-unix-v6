@@ -1,0 +1,33 @@
+University of Illinois 'Network Unix'
+(from Noel Chiappa)
+
+  The first networked Unix system was one produced at the University of
+  Illinois in 1974-75 for use on the <a href="http://en.wikipedia.org/wiki/ARPANET">ARPANET</a>;
+  it used the <a href="http://en.wikipedia.org/wiki/Network_Control_Program">NCP</a> protocol.
+
+  The code is divided into three main groups: code for the kernel (further divided into
+  device drivers, and code common to all methods of interfacing to the ARPANET); a daemon
+  which ran as a process, which handled a lot of the protocol overhead (e.g. opening and
+  closing connections); and programs (also run as processes) to implement applications
+  such as FTP and TELNET.
+
+  The code was originally written mostly by Gary R. Grossman and Steve
+  F. Holmgren; many others later contributed fixes and improvements. The code
+  rapidly spread among computer science centers which were connected to the
+  ARPANET; this copy of the code came via NOSC (Naval Ocean Systems Center)
+  and SRI.
+
+  Also included are two important major application packages produced
+  elsewhere: the MH mail reader, done by Bruce S. Borden at RAND based on
+  suggestions by R. Stockton Gaines; and the MMDF mail agent, written by David
+  Crocker at the University of Delaware.
+
+  For more information about this system, see:
+  - Steve Holmgren; "The Network UNIX System"; Center for Advanced
+  Computation, University of Illinois at Urbana-Champaign; Urbana, Illinois;
+  1975
+  - Karl C Kelley, Richard Balocca, Jody Kravitz; "A Network Unix System for
+  the ARPANET: Volume 1 - The Network Control Program"; Center for Advanced
+  Computation and Computing Services Office, University of Illinois at
+  Urbana-Champaign; Urbana, Illinois; 1978
+
