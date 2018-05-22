@@ -1,0 +1,5 @@
+if -r rmf rm rmf
+load rmf subs.a strings.a wait -O libg.a libh.a
+if -r a.out mv a.out rmf
+:					fini
+

@@ -1,0 +1,14 @@
+One problem that shows up in the asnchronous tty driver is that characters
+are occasionally lost when both Unix and the user are typing.  Sometimes
+just an output character is dropped, more frequently just an input character,
+most frequently one of each.  This happens across a wide range of PDP-11
+devices, so the problem is not with an individual driver.
+
+It also happens with the synchronous tty driver if you try to type ahead,
+but since this is so unaesthetic, it is rarely done, and hence is not a
+real problem.
+
+I suspect that somewhere in tty.c is a buried assumption that a tty is a
+half-duplex terminal; that is, that input and output operations will never
+be going on simultaneously, so that at some point where it should lock out
+interrupts, it doesn't.  I've never been able to find it.

@@ -1,0 +1,117 @@
+1,2c1,3
+< #
+< /* global command --
+---
+> #/*
+> Module Name:
+> 	glob.c -- global command --
+4c5,13
+<    glob params
+---
+> Installation:
+> 	if $1e = finale goto finale
+> 	cc glob.c
+> 	exit
+> : finale
+> 	cc -O -s glob.c
+> 	if ! -r a.out exit
+> 	su cp a.out /etc/glob
+> 	rm a.out
+6,9c15,16
+<    "*" in params matches r.e ".*"
+<    "?" in params matches r.e. "."
+<    "[...]" in params matches character class
+<    "[...a-z...]" in params matches a through z.
+---
+> Synopsis:
+> 	execl("/etc/glob", "glob", <private dir>, <command> [, <arg>]... );
+11,15c18,19
+<    perform command with argument list
+<   constructed as follows:
+<      if param does not contain "*", "[", or "?", use it as is
+<      if it does, find all files in current directory
+<      which match the param, sort them, and use them
+---
+> Function:
+> 	glob params:
+17,19c21,24
+<    prepend the command name with "/bin" or "/usr/bin"
+<    as required.
+< */
+---
+> 	"*" in params matches r.e ".*"
+> 	"?" in params matches r.e. "."
+> 	"[...]" in params matches character class
+> 	"[...a-z...]" in params matches a through z.
+21,23c26,29
+< #define	E2BIG	7
+< #define	ENOEXEC	8
+< #define	ENOENT	2
+---
+> 	perform command with argument list constructed as follows:
+> 	  if param does not contain "*", "[", or "?", use it as is
+> 	  if it does, find all files in current directory
+> 	  which match the param, sort them, and use them
+25,31c31,32
+< #define	STRSIZ	522
+< char	ab[STRSIZ];		/* generated characters */
+< char	*ava[200];		/* generated arguments */
+< char	**av &ava[1];
+< char	*string ab;
+< int	errno;
+< int	ncoll;
+---
+> 	prepend the command name with "/bin" or "/usr/bin"
+> 	as required.
+32a34,61
+> Restrictions:
+> 
+> Diagnostics:
+> 
+> Files:
+> 
+> See Also:
+> 
+> Bugs:
+> 
+> Compile time parameters and effects:
+> 
+> Module History:
+> */
+> #define E2BIG   7
+> #define ENOEXEC 8
+> #define ENOENT  2
+> 
+> #define STRSIZ  522
+> char    ab[STRSIZ];             /* generated characters */
+> char    *ava[200];              /* generated arguments */
+> char    **av &ava[1];
+> char    *string ab;
+> int     errno;
+> int     ncoll;
+> char    *dfltfile;      /* for user bin dir */
+> char	shnam[] "/bin/sh";		/* for command files */
+> 
+38c67
+< 	if (argc < 3) {
+---
+> 	if (argc < 4) {
+42a72
+> 	dfltfile = *argv++;
+44c74
+< 	while (--argc >= 2)
+---
+> 	while (--argc >= 3)
+50a81,82
+> 	if(*dfltfile)   /* if we got a user dir, try it */
+> 		execute(cat(dfltfile, ava[1]), &ava[1]);
+64,65c96,97
+< 		int	ino;
+< 		char	name[16];
+---
+> 		int     ino;
+> 		char    name[16];
+135c167
+< 		*--arg = "/bin/sh";
+---
+> 		*--arg = shnam;

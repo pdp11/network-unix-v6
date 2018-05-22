@@ -1,0 +1,74 @@
+You found me. J I regret that I don’t have any authority to speak for Rand on releasability of things done for them, and I had no role in creating the actual code.  I would hope they would view this as beneficial historical work, but you will need to contact Rand, public affairs office or some such.
+
+Carl Sunshine
+Principal Engineer
+The Aerospace Corporation
+310-336-6991
+carl.sunshine@aero.org
+carl.a.sunshine.ctr@mail.smil.mil
+JWICS:  carl.sunshine_FFRDC@af.ic.gov
+
+From: Alex McKenzie [mailto:amckenzie3@yahoo.com]
+Sent: Monday, February 13, 2017 9:42 AM
+To: Carl A Sunshine <carl.a.sunshine@aero.org>
+Subject: Fw: [ih] RAND Unix Port code
+
+Carl,
+
+If this email address still works for you, here's a question directed at you.
+
+Cheers,
+Alex
+
+
+----- Forwarded Message -----
+From: Noel Chiappa <jnc@mercury.lcs.mit.edu<mailto:jnc@mercury.lcs.mit.edu>>
+To: internet-history@postel.org<mailto:internet-history@postel.org>
+Cc: wkt@tuhs.org<mailto:wkt@tuhs.org>; jnc@mercury.lcs.mit.edu<mailto:jnc@mercury.lcs.mit.edu>
+Sent: Monday, February 13, 2017 12:09 PM
+Subject: [ih] RAND Unix Port code
+
+I'm not sure if this news has spread widely yet, but I have just recovered a
+complete copy of the filesystem for the MIT-CSR Unix (the V6 Unix system at
+MIT-LCS on which most of the early TCP/IP work at MIT was done). I have found
+many treasures therein, including several early TCP/IP's. (More on this
+below.)
+
+I'm trying to make them all accessible through Unix source archives:
+
+  http://minnie.tuhs.org/cgi-bin/utree.pl
+
+for public access. To do so, I need to make sure they are all OK to release
+publicly. (Back in the day, they were not, but that was because the underlying
+UNIX code was protected.)
+
+One of them is the BBN TCP/IP done by Mike Wingfield. It uses the RAND Port
+code, and I'm trying to work out who can tell me, or OK, the release of that
+code.
+
+Alas, Steven Zucker, the person who wrote the RAND report detailing the
+implementation of ports (and likely the actual author of the code) is no
+longer with us. Carl Sunshine wrote the overview document, but I don't know
+how to reach him - does anyone here? Does anyone else have any information
+on whether or not we can make this code public? Thanks!
+
+
+We do not, alas, have the source for the first BBN Unix TCP/IP - the one done
+by Jack Havery as, I am under the impression, a port of Jim Mathis' TIU code.
+
+We do, however, have the complete TIU source, and I hope to make that
+available too. Same question(s) about that: does anyone know how to reach Jim,
+or know anything about the releaseability of that code? (I seem to recall it
+was done under contract to DARPA, and so probably was open, but not all code
+written under a contract with the USG is necessarily public.)
+
+
+Thanks!
+
+    Noel
+_______
+internet-history mailing list
+internet-history@postel.org<mailto:internet-history@postel.org>
+http://mailman.postel.org/mailman/listinfo/internet-history
+Contact list-owner@postel.org<mailto:list-owner@postel.org> for assistance.
+

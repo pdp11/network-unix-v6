@@ -1,0 +1,5 @@
+if -r scan rm scan
+load -n scan scansub subs.a strings.a wait -O libg.a libh.a
+if -r a.out mv a.out scan
+:					fini
+

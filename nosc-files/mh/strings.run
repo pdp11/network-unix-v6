@@ -1,0 +1,2 @@
+cc -c strings.c
+if -r strings.o mv strings.o strings.a

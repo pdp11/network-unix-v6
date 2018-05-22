@@ -1,0 +1,10 @@
+rm mailer.h
+ln mailer-ec.h mailer.h
+load -n submit mailsubs hostrans \
+	tailor-ec \
+	nlibff.a \
+	mailib.a \
+    | tee errlst
+if -r a.out mv a.out submit-ec
+rm mailer.h
+ln mailer-wc.h mailer.h

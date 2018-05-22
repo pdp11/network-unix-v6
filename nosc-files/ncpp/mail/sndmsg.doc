@@ -1,0 +1,198 @@
+SNDMSG(I)                      3/22/76                       SNDMSG(I)
+
+
+
+
+NAME
+          sndmsg - send a message
+
+SYNOPSIS
+          sndmsg
+
+DESCRIPTION
+             SNDMSG is a message sending  program  modeled  after  the
+     Tenex  program  sndmsg.   When  invoked,  sndmsg will ask for two
+     lists of recipients, a primary list and a  secondary  list.   Any
+     person  whose  name appears on either list will receive the note,
+     and the only difference between the  two  lists  is  whether  the
+     person's  name  comes under the heading 'To' or 'cc'.  The format
+     is the same for both lists - a series of names separated by  com-
+     mas.  Each name on the list must be one of the following:
+
+        a name listed in the alias file (see below)
+        the login-name of a unix user
+        a file name immediately followed by a colon
+        a network address of the form <name>@<site>
+          (the @ character is disabled as a line-delete while
+          the 'To' and 'cc' lists are being typed
+
+             The alias file contains entries indicating  that  a  name
+     used  in  sndmsg  is to be replaced by other names.  For example,
+     the following entry -
+
+        skiers:jal,wahrman@RCC,/etc/skilist:
+
+     would indicate that any messages which included 'skiers'  in  the
+     distribution  list  would  go  to  jal, wahrman@RCC, and everyone
+     listed in the file /etc/skilist.  Each entry in  the  alias  file
+     must  fit  in  a  single line.  This limitation does not hold for
+     files, however, so an alias entry can point to a file (as in this
+     example) in order to increase the number of people in refers to.
+
+             A file can be specified in the  distribution  list;  this
+     file  should  contain  names  of  people  to receive the message.
+     Searching through files and through the alias file is not  recur-
+     sive, so an entry for an alias name may not include another alias
+     name (or a file which contains alias names), and a file  may  not
+     include  a  file  name  (or  an  alias name which contains a file
+     name).  This has some advantages: for example, the following  en-
+     try -
+
+        bobg:bobg,Greenberg@BBN
+
+     would indicate that any messages sent to the  name  'bobg'  would
+     show  up  in  the  local mailbox for bobg and also be sent to the
+     network address shown.
+
+             If sndmsg is called by the server FTP, the alias facility
+     also becomes available for incoming network mail.
+
+             At this time, messages which include any network users on
+
+
+
+
+                                - 1 -
+
+SNDMSG(I)                      3/22/76                       SNDMSG(I)
+
+
+
+     the distribution list who are a  sites  other  than  Rand-RCC  or
+     Rand-ISD will be monitored by the correspondence office.
+
+             After the 'To' and 'cc' lists have been  entered,  sndmsg
+     will ask for a subject.  If it is necessary to type more than one
+     line of text for the subject or either of the recipient lists,  a
+     newline  character preceded  by a backslash (the unix literal es-
+     cape) can be used anywhere in the text.   There  is,  however,  a
+     maximum of 256 characters allowed for each of the above inputs.
+
+          After  you have entered the subject and recipient lists, you
+     will  be  prompted for the text of your message.   While entering
+     your message, you can use a hybrid of the unix and sndmsg editing
+     characters.
+
+          ^a       teletype-oriented character delete
+          ^b       include the contents of some file into the text
+          ^d       end of message
+          ^f       equivalent to ^b
+          ^h       scope oriented character delete
+          ^r       retype the current line
+          ^s       retype the entire message
+	  ^w       delete the preceding word
+          ^x       line delete
+          ^z       equivalent to ^d
+          @        line delete  (standard unix character)
+          #        character delete  (standard unix character)
+          bs       character delete
+          del      interrupt  (standard unix character)
+          \        can be used in the standard Unix way as a literal
+                     escape and to enter full ASCII on a half-ASCII
+                     terminal
+
+          After you have finished entering and editing  your  message,
+     type a ^d or a ^z to tell sndmsg that you are done.  It will then
+     try to mail the message to all of the recipients.   The  name  of
+     each  recipient  will  be printed out with the results of the at-
+     tempt to send the message  to that  person.    Mail  for  network
+     users will be queued for later handling by a mailer daemon.
+
+FILES
+          /etc/passwd            Location of user mailboxes
+          unsent.mail            Undeliverable mail left here
+          returned.mail          Undeliverable network mail returned
+                                   by mailer
+          .mail                  Delivered mail left here
+          /tmp/send?????         Temporary file
+          /usr/net/hnames        Network host names
+          /usr/netmail/?????     Queued messages
+          /usr/net/aliases       List of alias names
+
+DIAGNOSTICS
+          All diagnostic messages are intended to be self explanatory.
+
+BUGS
+          The control-w handling is quite sloppy.
+
+
+
+
+                                - 2 -
+
+SNDMSG(I)                      3/22/76                       SNDMSG(I)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                - 3 -
+

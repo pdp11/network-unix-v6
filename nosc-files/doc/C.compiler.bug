@@ -1,0 +1,54 @@
+I am having problems with the C compiler.  In some cases, it optimizes
+references to register quantities incorrectly.  The code fragement in
+question is from the NCP daemon code, and is given below:
+
+hw_all(skt_p,msgs,bits)
+struct socket	*skt_p;
+int	msgs,bits;
+{
+	register char	*bp;	/* byte pointer for constructing command */
+
+	bp = &hw_buf[0];	/* point at beginning of assembly buffer */
+	*bp++ = hhi_all;	/* op code */
+	*bp++ = skt_p->s_hstlnk.hl_link;	/* link number */
+	*bp++ = msgs.hi_byte;	/* copy messages, swapping bytes */
+	*bp++ = msgs.lo_byte;
+	*bp++ = 0;		/* 1st 2 bytes of bits are zero */
+	*bp++ = 0;
+	*bp++ = bits.hi_byte;	/* copy bits, swapping bytes */
+	*bp++ = bits.lo_byte;
+	qup_pro( &hw_buf[0],8 );	/* queue for sending */
+}
+
+Which compiles into:
+
+_hw_all:
+~~hw_all:
+~skt_p=4
+~bp=r4
+~bits=10
+~msgs=6
+jsr	r5,csv
+mov	$_hw_buf,r4
+movb	$4,(r4)+
+mov	4(r5),r0
+movb	7(r0),(r4)+
+movb	7(r5),(r4)+
+movb	6(r5),(r4)+
+clrb	(r4)+
+clrb	(r4)+
+movb	11(r5),(r4)+
+movb	10(r5),(r4)+
+mov	$10,(sp)
+mov	r4,-(sp)	/ OOPS!  Should be: mov	$_hw_buf,-(sp)
+jsr	pc,*$_qup_pro
+tst	(sp)+
+jmp	cret
+
+As you can see, there was an error in the compiler's model of the register
+values.  Has anybody encountered this before?  If so, do you have a fix?
+At the moment, this means that I must compile code on my machine (an 11/40)
+for use on the NUSC-NPT machine (an 11/70) since I don't trust the compiler.
+I would regret having to move my compiler to NUSC-NPT (I'd rather do the
+reverse!) because the rest of the optimizations were very good.  (NUSC-NPT
+is a latter V6 system than mine.)

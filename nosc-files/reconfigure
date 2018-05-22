@@ -1,0 +1,48 @@
+set A = wk
+if $1x = x goto go
+set A = $1
+: go
+if -r $A goto ok
+echo "Directory "$A" not present for reconfiguration"
+exit
+: ok
+if $2x != x goto ok1
+set B = uration
+shift
+echo Configuring default version of $A
+goto ok2
+: ok1
+if $2x = x exit
+shift
+set B = .$1
+set C = .$1
+set D = .$1
+echo Configuring $1 version of $A
+: ok2
+shift
+if -r $A/config$B -o -r $A/conf.mod$C goto ok3
+: err
+echo "Configuration files not present"
+goto ok1
+: ok3
+if -r $A/config$B goto ok4
+if ! -r $A/configuration goto err
+set B = uration
+: ok4
+if -r $A/conf.mod$C goto ok5
+set C = ""
+: ok5
+date
+/usr/sys/conf/mkconf <$A/config$B
+if -r $A/conf.mod$C sh -c "ed - <"$A/conf.mod$C
+echo l.o:
+	as l.s
+	mv a.out $A/l.o
+	rm l.s
+echo c.o:
+	cc -c -O c.c
+	mv c.o $A/c.o
+	rm c.c
+chmod 644 $A/l.o $A/c.o
+loadit $A $1 $D
+goto ok1

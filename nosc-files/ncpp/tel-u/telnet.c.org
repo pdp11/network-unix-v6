@@ -1,0 +1,1165 @@
+#
+/*
+module name:
+	telnet.c
+
+installation:
+	cc -O -n -x telnet.c
+	su cp a.out /usr/bin/telnet
+
+	/usr/bin/telnet should have 1755 mode.
+
+*/
+#include "/h/net/telnet.h"
+#include "/h/net/mkcharset.h"
+#include "/h/net/openparms.h"
+
+
+/*
+
+
+/* integer decs */
+
+int savetty [3];			/* save the users tty on entry */
+int insflag 0;				/* set when an INS interrupt occurs */
+int exptins 0;				/* expect an ins -- set in response from tty side */
+int numsynchs 0;			/* num of synch sequences to be looked at */
+int nchars 0;				/* number of characters read from tty */
+int netfile -1;				/* file descriptor for communication with the network */
+int netprocid;				/* process id of companion process */
+int new_telnet;				/* 1 if new else 0; set by netopen */
+
+/* char decs */
+
+char netbuf[128];			/* buffer to fiddle with characters */
+char breaks [] "  \r\n";		/* break chars for getoken */
+char *commarr[]
+{
+	"connect",			/* connect hostname */
+	"close",			/* close network connection */
+	"bye",				/* end this program */
+	"end",				/* end this program */
+	"character",			/* switches to character mode */
+	"msg",				/* switches to message mode */
+	"flag",				/* sets the flag character */
+	"eli",				/* set the endline character */
+	"help",				/* prints help file */
+	"break",			/* send a telnet break */
+	"abort",			/* send a telnet abort output */
+	"ayt",				/* send a telnet are you there */
+	"goa",				/* send a telnet go ahead */
+	"interrupt",			/* send a telnet interrupt process */
+	"synch",			/* send telnet synch sequence */
+	"echo",				/* turn local echo on or off */
+	"load",				/* load a character set */
+	"tenex",			/* drop into tenex mode */
+	"wait",				/* wait for num secs speced */
+	"off",				/* same as echo off */
+	"on",				/* same as echo on */
+	  0
+};
+
+/* associated parameter array for the above commands */
+char *cmd_param[]
+{
+	0,				/* execute */
+	0,				/* netopen */
+	0,				/* netclose */
+	0,				/* bye */
+	0,				/* end */
+	0,				/* set_charmode */
+	0,				/* set_msgmode */
+	0,				/* set_echomode */
+	0,				/* set_endline */
+	"/etc/nethelp",			/* help */
+	otel_break,			/* break */
+	tel_ao,				/* abort output */
+	tel_ayt,			/* are you there */
+	tel_ga,				/* go ahead */
+	tel_ip,				/* interrupt process */
+	0,				/* telnet synch */
+	0,				/* enter_define_tab */
+	0,				/* echomode */
+	0,				/* save char set */
+	0,				/* load char set */
+	0,				/* print char set */
+	0,				/* tenex mode */
+	0,				/* delay */
+	2,				/* off */
+	1,				/* on  */
+	0
+};
+char *nextparam 0;
+char *netbufp;
+char *params[20];
+char char_set_name[40];		/* holds current character set name */
+char bitmask[]			/* returns two to the power of the index */
+{
+	01,02,04,010,020,040,0100,0200
+};
+
+/* structure decs */
+
+struct openparams openparams;	/* struct for making parameterized connections */
+
+struct {
+	char	minor;
+	char	major;
+	int	inumber;
+	int	flags;
+	char	nlinks;
+	char	uid;
+	char	gid;
+	char	size0;
+	int	size1;
+	int	addr[8];
+	int	actime[2];
+	int	modtime[2];
+} statb;
+/**/
+main(argc,argv)
+int  argc;
+char *argv[];
+{
+
+	register char *charp;
+	register char *endp;
+	register int  i;
+	extern bye();
+
+	/* save the users tty on entry */
+	gtty( 0,savetty );
+
+	/* setup so if interrupt or quit does happen term is straightened out */
+	signal( 1, bye );	/* hangup */
+	signal( 2, bye );	/* interrupt */
+	signal( 3, bye );	/* quit */
+
+
+	/* synthesize home directory and possible char set file */
+	endp = colon( charp = gethomedir( netbuf ) );
+	*--endp = 0;		/* make a null termed string */
+	/* now that we got the home dir bring on the troops */
+	strmove( "/character_set",strmove( charp,char_set_name )+1 );
+	/* load it if it is there */
+	load_char_set();
+
+	/* reset the crmode bit so he has to type cr to end the line */
+	chngtty( RAW,CRMOD+ECHO );
+
+	/* if there are parameters fake up a connect */
+	if( argc > 1 )
+	{
+		/* move in the fake connect command */
+		charp = strmove( "conn ",netbuf );
+		for( i=1; i<argc; i++ )
+		{
+			charp = strmove( argv[i],++charp );
+			*++charp = ' ';
+		}
+		*charp = CR;		/* stick in line terminator */
+		*++charp = LF;		/* terminate the line */
+		netbufp = charp + 1;	/* simulate buffer_full_line */
+		command_processor();	/* make the connection happen */
+	}
+	else
+	{
+		/* tell him what he has gotten into */
+		printf(" UNIX User Telnet -- Ver I.5\r\n");
+	}
+/**/
+	/* main loop */
+	while( 1 )
+	{
+		prompt();	/* let him know were here */
+	loop:	netbufp = netbuf;	/* setup global for map_echo */
+		nchars = 0;		/* say zero chars in netbuf */
+
+		/* get some chars and see if the first is flagchar or net not open */
+		if( netfile < 0 || map_echo( getc() ) == flagchar )
+		{
+			/* echo the flag char if we didn't do it yet */
+			if (!echomode && netfile > 0) printf ("%s",&flagchar);
+
+			/* no either netfile is not open or user typed command char */
+			/* save echomode state */
+			i = echomode;
+			echomode++;
+			if (!buffer_full_line()) {	/* get a full line */
+				echomode = i;
+				goto loop;
+				}
+			echomode = i;		/* reset echomode to normal */
+			command_processor();	/* go do the command */
+		}
+		else
+		{	/* this data is going to the net can I buffer a full
+			   line or must I send what has been typed
+			*/
+			if( charmode )
+				/* must send what has been typed */
+				while( input.cnt ) {	/* while there are chars */
+					if( map_echo( getc() ) == endline ) break;
+				}
+			else
+				if (!buffer_full_line()) goto loop;	/* can get full line */
+
+			/* now send to net checking for host closing */
+			if( write(netfile,netbuf,nchars) <= 0 )
+				netclose();
+		}
+	}
+}
+
+/*
+	C O M M A N D _ P R O C E S S O R	--  init nexparam for getoken
+						    call indicated command thru
+						    decode_command
+
+*/
+
+command_processor()
+{
+
+	register index;
+	extern (*decode_command[])();
+
+	if( *(nextparam=netbuf) == flagchar) ++nextparam;
+	if ((index = getcomm (getoken ())) >= 0)
+	(*decode_command[ index ]) (cmd_param[ index ]);
+
+}
+
+/*
+
+	G E T C O M M		-- Scans command array for match between
+				   command user typed and available commands.
+				   Returns index into commarr if match found
+				   otherwise 0
+*/
+
+getcomm(strpp)
+char *strpp;
+{
+
+	register char *comp;	/* pointer to commarr */
+	register char *strp;	/* holds strpp for speed */
+	register index;		/* keeping track of index into commarr */
+	int	length;		/* length of token */
+	int	candidate;	/* candidate index */
+
+	/* init some things */
+	strp = strpp;
+	index = 0;
+	candidate = 0;
+	length = 0;
+
+	if (strp == 0) return (-1);
+	while (*strp++) ++length;		/* length of token */
+	strp = strpp;				/* reset it */
+
+	while( comp = commarr[ index++ ] )
+		if( compar( comp,strp,length ) == 0 )
+			if (candidate) {
+				printf ("Command string not unique.\r\n");
+				return (-1);
+				}
+			else candidate = index;
+	return (candidate);
+}
+
+/*
+	G E T O K E N	--  looks at the command string in netbuf, and starting
+			    from nextparam( global ) will scan until finds member
+			    of terminators, once found, makes the string null 
+			    terminated, and returns the beginning of the string
+			    if the first char found was a terminator returns 0
+*/
+
+char *getoken()
+{
+
+	register char *inp;
+	register char *startp;
+
+	startp = inp = nextparam;	/* point to the beginning of the string */
+
+	while( *inp == ' ' ) ++inp;	/* scan off leading blanks */
+	startp = inp;			/* point at beginning of token */
+	while( !setmember( *inp,breaks) ) ++inp;	/* while not in set bump inp */
+
+	/* if we found something update things and return starting pointer */
+	if ((inp != startp) & (inp < netbufp))
+	{
+		*inp++ = NULL;		/* make a null string */
+		nextparam = inp;	/* update for next time */
+		return( startp );	/* return beginning of string */
+	}
+	else
+		return( 0 );		/* nothing found return zero */
+}
+
+/*
+	N E T O P E N		Attempts to open the network file specified
+				by the first call on getoken, if open is
+				successful, will fork and start a process to
+				read from the network and write to the terminal
+
+*/
+
+netopen()
+{
+	register char *namep;
+	register char *hostp;
+	int	 got_host;		/* to determine if host was specified */
+
+	char hostname[40];	/* holds host name file to open */
+
+	/* check to see if there is an outstanding telnet input process */
+	if (netfile >= 0) {
+		write (1, "Connection Still Open\r\n", 23);
+		return (0);
+	}
+	/* get the first param into hostp */
+	if ((hostp = getoken()) == 0) {
+		printf ("Calling sequence is 'conn <host> [<parms>]'.\r\n");
+		return (0);
+		}
+
+	/* build the first piece of host filename */
+	namep = strmove( "/dev/net/",&hostname ) + 1;
+
+	/* if connection is to specific host number */
+	if( *hostp == '-' )		/* handle it correctly */
+	{
+		strmove( "anyhost",namep );	/* finish hostname */
+		/* tell user something is happening */
+		printf("Attempting Connection \r\n");
+		got_host = 0;		/* hasn't been specified yet */
+	}
+	else
+	{
+		/* this is a string host name */
+		strmove( hostp,namep );
+		if (stat (hostname, &statb) < 0) {
+			printf ("Host %s not in host table\r\n", namep);
+			return (0);
+		}
+		printf("Attempting Connection to %s\r\n",namep );
+		got_host = 1;		/* got host id */
+	}
+
+	/* parse and load and extra params to the open */
+	if( loadopnparams() )
+		return( 0 );	/* if it found an error return */
+
+	/* set tty mode to -raw so rubouts work while im waiting for con open */
+	chngtty( 0,RAW );
+
+	/* try to open the connection */
+	new_telnet = (openparams.o_fskt [1] != 1) ? 1 : 0;
+
+	if (got_host || openparams.o_frnhost)
+		netfile = open( &hostname,&openparams );
+	else {
+		printf ("Host name not specified.\n");
+		return (0);
+	}
+
+	/* reset tty mode so I have complete control again */
+	chngtty( RAW,0 );
+
+	if( netfile < 0 )
+	{
+		printf(" Host is Unavailable \r\n");
+	}
+	else
+	{
+		/* see if can start up companion process that reads from
+		   net and writes to termainal, main will handle reading from
+		   terminal and writing to net
+		*/
+		netprocid = fork();	/* here goes */
+		if( netprocid == -1 )		/* start up success? */
+		{
+			printf(" System Resources Unavailable \r\n");
+			return(0);
+		}
+		if( netprocid == 0 ) {
+			/* i am offspring so say start up telnetin */
+			execl ("/usr/bin/usrtelnetin"
+				,"telnet-input"
+				,&netfile
+				,0
+				);
+			printf ("Could not find telnet-input.\r\n");
+			exit();
+			}
+	}
+	return( 0 );		/* normal return parent process */
+}
+/*
+	L O A D O P N P A R A M S	-	parses and loads -a -h -s -t
+						parameters to an open
+
+						-a - nominal allocation
+						-h - specific host number
+						-s - specific socket number
+						-t - number of secs before time
+
+*/
+
+loadopnparams()
+{
+
+	register char *paramp;
+	register num;
+
+	/* load the open structure with default params */
+	for( paramp = &openparams; paramp < &openparams+1; *paramp++ = 0 );
+	openparams.o_bsize = 8;		/* byte size of 8 */
+	openparams.o_timeo = 30;	/* only wait 30 sec for completion */
+	openparams.o_fskt[1] = 23;	/* default to New Telnet */
+
+	/* while there are params left on command line */
+	while( paramp = getoken() )
+	{
+		if( *paramp == '-' ) paramp++;
+
+		/* get the associated number */
+		num = number();
+		/* apply some loose max min value checking */
+		if( num < 0 || num > 1024 )
+			num = 1024;
+
+		/* go stick the number in the right field */
+		switch ( *paramp )
+		{
+			/* amount of allocation to keep up with frn host */
+			case 'a':
+				openparams.o_nomall = num;
+				break;
+			/* specify a host number in octal */
+			case 'h':
+				openparams.o_frnhost = num;
+				break;
+
+			/* specific foreign socket number */
+			case 's':
+				openparams.o_fskt[1] = num;
+				break;
+
+			/* number of seconds before timeout */
+			case 't':
+				openparams.o_timeo = num;
+
+		}
+	}
+	return( 0 );
+}
+
+
+/*
+	E X E C U T E 		--  user typed a command so try to start
+				    up a unix file by that name. First look
+				    in users directory then in /bin then in
+				    /usr/bin.  If not there at all
+				    just exit.  The parent waits for the off-
+				    spring to exit.
+
+*/
+
+execute()
+{
+
+	int status;			/* status of child process */
+	register int startid;		/* id of forked process */
+	extern bye();			/* routine executed if we are killed */
+
+	/* if first char is flag char ignore it */
+	if( *(netbufp = netbuf) == flagchar )
+		netbufp++;
+	/* if not unix escape, error */
+	if(*netbufp++ != '!') {
+		printf("Unrecognized command -- try 'help'\r\n");
+		return;
+	}
+
+	/* put term back for duration */
+	stty( 0,savetty );
+
+	startid = fork();
+
+	if( startid < 0 )
+	{
+		printf("Couldn't get system resources\n");
+	}
+
+	else if( startid == 0 )
+	{
+		/* here for offspring */
+		signal(1,0);	/* normal processing for hangup, interrupt, */
+		signal(2,0);	/*    and quit signals during Unix command */
+		signal(3,0);
+
+		/* unparse first command so shell can use glob */
+		*--nextparam = ' ';
+		netbuf[ nchars-2 ] = 0;	/* make a null termed string */
+		execl("/bin/sh","sh","-c",netbufp,0);
+		exit(0);
+	}
+	else	/* here for parent */
+	{
+		signal( 2,1 );		/* ignore interrupt */
+		signal( 3,1 );		/* ignore quit */
+		while (wait(&status) != startid);
+		signal( 2,bye );	/* allow interrupt */
+		signal( 3,bye );	/* allow quit */
+	}
+	printf("!\n");
+	chngtty( RAW,ECHO+CRMOD );
+}
+
+/*
+	N E T C L O S E	-- called when user wants to close network file
+			   if netfile open
+				close netfile
+				say netfile closed
+				mark netfile closed
+				reset to message mode 
+*/
+
+netclose()
+{
+
+	if( netfile > 0 )
+	{
+		close( netfile );
+		netfile = -1;
+/* why??
+		charmode = 0;		/* set to message mode */
+/*		kill (netprocid,9);		*/
+		while( wait() != netprocid );	/* wait for child to die */
+	}
+}
+
+/*
+	B Y E	--   Called to exit the program 
+		     resets the ttybits 
+		     call exit
+*/
+
+bye()
+{
+
+	stty( 0,savetty );	/* put things back the way they were */
+	netclose ();
+	exit();
+}
+
+/*
+	S E T _ C H A R M O D E		--   set term so whatever is typed is
+					     sent immediately dont wait for
+					     endline.  main loop looks at this
+*/
+set_charmode()
+{
+	printf(" Charmode\r\n");	/* say in charmode */
+	charmode++;			/* mark in charmode */
+}
+
+/*
+	S E T _ M S G M O D E		--  set term so waits for endline to
+					    be typed before examining input
+*/
+
+set_msgmode()
+{
+	printf(" Msgmode\r\n");		/* say in message mode */
+	charmode = 0;
+}
+
+/*
+
+	S E T _ E C H O		--	set echo mode on or off speced by
+					'echo on' or 'echo off'. Echomode
+					decides whether local echoing is
+					done( see map_echo )
+
+*/
+set_echo( comtype )
+int comtype;
+{
+
+	register char *onoroff;
+	int old_echo;
+	char buf [3];			/* to write to net */
+	old_echo = echomode;		/* so we can tell if it changed */
+	if( comtype )
+		echomode = comtype & 01;	/* off an on commands */
+	else
+	/* for echo on and echo off commands */
+		echomode = ( *(onoroff = getoken()+1) == 'n' ) ? 1 : 0;
+
+	if (old_echo != echomode & netfile > 0) 
+		if (new_telnet) {
+			buf [0] = tel_iac;
+			buf [1] = echomode ? tel_dont : tel_do;
+			buf [2] = 1; 		/* echo option */
+			write (netfile,buf,3);
+			}
+		else 	{
+			buf [0] = echomode ? otel_noecho : otel_echo;
+			write (netfile,buf,1);
+			}
+}
+/*
+	S E T _ E N D L I N E		--  set the endline character to something
+*/
+set_endline()
+{
+char	*cp;
+	if ((cp = getoken()) != 0) {
+		endline = *cp;
+		breaks [1] = endline;
+		}
+	else printf ("Endline character not given.\r\n");
+}
+
+/*
+	S E T _ F L A G C H A R		--  set the flag character to something
+*/
+
+set_flagchar()
+{
+char *cp;
+	if ((cp = getoken()) != 0) {
+		flagchar = *cp;
+		printf(" Flag Character is %c\r\n",flagchar );
+		}
+		else printf ("Flag Character not given.\r\n");
+}
+/*
+
+
+
+
+
+
+	T E N E X			-- put the terminal into charmode
+					   with local echo.  Saves the
+					   system load of each echo character.
+
+
+*/
+tenex_mode()
+{
+
+	charmode++;		/* set character mode */
+	set_echo (010);
+}
+/* 
+
+
+
+
+
+	D E L A Y		-- wait the number of secs specified 
+
+
+*/
+delay()
+{
+
+	sleep( number() );
+}
+/*
+	S E N D _ P R O T O	--  send a telnet iac followed by the char
+				    passed to implement telnet break,
+				    telnet are you there, telnet abort output,
+				    and telnet go ahead functions in response
+				    to user command
+ */
+
+send_proto( protocmd )
+{
+
+	int proto;
+
+	if( new_telnet ) {
+		/* formulate <telnet_iac> < telnet command > */
+		proto = ( protocmd << 8 ) | ( tel_iac&0377 );
+		/* write command to net */
+		write( netfile,&proto,2 );
+	} else {
+		/* write for old telnet proto */
+		write( netfile,&protocmd,1 );
+	}
+}
+
+/*
+
+
+
+
+	S E N D _ S Y N C H	send the telnet synch sequence
+
+*/
+send_synch()
+{
+
+	if( netfile < 0 ) 
+		return;			/* dont let him send if file isnt open */
+	kill( netprocid,13 );		/* tell other side to expect ins,datamark seq */
+/* DEBUG -- for some reason, no sendins subroutine is present
+	sendins( netfile );		/* send host - host ins command */
+	send_proto( otel_dm );		/* send data mark */
+}
+/*
+
+	L O A D _ C H A R _ S E T		load the current character
+						set
+*/
+load_char_set()
+{
+	int fid;
+
+	if( (fid=open( char_set_name,0 )) >= 0 )
+	{
+		read( fid,maptab,SVESIZE );
+		printf("%s\r\n",char_set_name);
+	}
+}
+
+/*
+	C H N G T T Y		--  Get the present tty status bits and change
+				    them to the setbits and resetbits passed
+
+*/
+
+chngtty( setbits,resetbits )
+int setbits,resetbits;
+{
+
+	int ttyarr[3];		/* get array to hold present status bits */
+
+	gtty( 0,ttyarr );	/* get present settings */
+	ttyarr[2] =| setbits;	/* set the setbits */
+	ttyarr[2] =& ~resetbits;	/* reset the resetbits */
+	stty( 0,ttyarr );	/* put them into force */
+}
+
+/*
+
+
+
+
+	P R O M P T		--  send a prompt character to user 
+*/
+
+prompt()
+{
+	if( netfile < 0 )
+		write(1, "* ",2 );
+}
+/*
+	G E T C		--   returns a character from the buffered structure
+			     'input'.  
+				if doing define expansion(single level for now)
+					return define expansion char 
+				if no chars buffered then buffer some
+					if read error return -1
+				decrement num of chars in queue
+				return char incrementing pointer
+*/
+
+getc()
+{
+
+	/* doing define expansion ? */
+	if( *input.def_expan_str )
+		return( *input.def_expan_str++ );
+
+	/* count zero? */
+	while( input.cnt == 0 )
+	{
+		if( (input.cnt=read(0,input.nextc = &input.data[0],80)) < 0 )
+			return( -1 );		/* done return error */
+	}
+	--input.cnt;			/* say one less around */
+	return( *input.nextc++ );	/* return char and bump pointer */
+}
+
+/* 
+
+
+
+
+
+
+	B U F F E R _ F U L L _ L I N E		--  keep getting characters
+						    until endchar found
+*/
+#define DELETE 0177
+#define EOT    04
+buffer_full_line()
+{
+
+	register char c;
+	while( (c=map_echo( getc()) ) != endline )
+	{
+		if( c == backsp )
+		{
+				netbufp =- 2;
+				nchars =- 2;
+		}
+		if( c == linedel  | nchars <= 0 )
+		{
+			netbufp = netbuf;
+			nchars = 0;
+			if (c == linedel) printf ("\r\n");
+			return (0);
+		}
+		if (netfile < 0 && (c == DELETE || c == EOT)) bye ();
+	}
+	return (nchars);
+}
+
+/*
+	M A P & E C H O		--  does the translation between the chars
+				    read in and the characters actually
+				    put in netbuf( thru netbufp ).
+
+					is the 0200 bit of the map of the char passed on
+						use bottome 7 bits to index into
+						definetab to assign define expan
+						str and move first char into netbuf
+					otherwise just put in char in maptab.
+					if echoing write output onto output file
+					update counters and pointers
+					return first character copied in
+*/
+
+char map_echo( c )
+char c;
+{
+
+	register char *outp;
+
+	outp = netbufp;	/* get current place in netbuf */
+	c =& 0177;	/* just look at bottom seven bits */
+
+	/* see if the user wants to send the char no matter what it is */
+	if( c == '\\' )		/* this the escape character */
+		*outp = getc();
+	else
+	/* This a mapped char and am I already mapping */
+	if( (*outp = maptab[c]) < 0 )
+	{
+		if( *input.def_expan_str == 0 )
+		{
+			input.def_expan_str = &stringtab[ definetab[ (*outp&0177) ]];
+			*outp = *input.def_expan_str++;
+		}
+		else	/* already expanding a define leave alone */
+			*outp = c;
+	}
+
+	++nchars;		/* say another character in buffer */
+	++netbufp;		/* bump to next character */
+
+	/* should I echo the char ? */
+	if( echomode && bit_on( *outp,echomask ) )
+		write(1,outp,1);	/* echo */
+	return( *outp );	/* return first char mapped */
+}
+/*
+
+	C O M P A R		Compares strings s1 to s2 for either nchars or
+				either string contains a null.  If s1 != s2
+				returns pointer to char in s1 at which point
+				compare failed.  If s1 == s2 returns 0
+
+*/
+
+
+compar( s1,s2,n )
+char *s1;
+char *s2;
+int n;
+{
+
+	register char c1,c2;
+
+	while( (c1 = *s1++) == (c2 = *s2++) && (n-- > 0) )
+		if( n == 0 || c1 == 0 || c2 == 0 )
+			return( 0 );
+	return( --s1 );
+}
+/*
+
+	S T R M O V E		Copies str1 to str2 until str1 contains a null
+
+*/
+
+char *strmove( str1,str2 )
+char *str1;
+char *str2;
+{
+
+	register char *src;
+	register char *dest;
+
+	src = str1;
+	dest = str2;
+
+	while( *dest++ = *src++ );
+
+	return( dest-2 );
+}
+
+/*
+
+
+
+
+
+	S T R L E N	--   return the number of characters in the null
+			     terminated string passed.  The count returned
+			     includes the null character at the end of the
+			     string
+*/
+
+strlen( str )
+char *str;
+{
+
+	register char *strp;	/* for speed */
+	register  int cnt;	/* for the number of chars */
+
+	strp = str;
+	cnt = 0;
+
+	while( *strp++ ) ++cnt;
+	return( ++cnt );
+}
+/*
+	P R T F I L E		Prints the file whose name is passed
+
+*/
+prtfile( fname )
+char *fname;
+{
+	register char *charp;
+	register int  cnt;
+	char buf[80];		/* somewhere to put the data */
+	int fid;		/* file id of opened file */
+
+	printf("\r\n\r\n");	/* space out a bit */
+
+	if( (fid = open( fname,0 )) >= 0 )
+	{
+		while( (cnt=read(fid,buf,80)) )
+		{
+			netbufp = netbuf;
+			nchars = 0;
+			charp = buf;
+			while( charp < &buf[cnt] )
+				map_echo( *charp++ );
+		}
+		close(fid);
+	}
+	else
+		printf(" cant open %s\r\n",fname );
+
+	printf("\r\n\r\n");
+}
+
+/*
+	S E T M E M B E R	--  looks in the set passed for the member
+				    if found will return the member else
+				    zero
+
+*/
+
+char setmember( member,set )
+char member;
+char *set;
+{
+
+	register char mem;	/* holds member for speed */
+	register char *setp;	/* holds set for speed */
+
+	setp = set;
+	mem = member;
+
+	/* while there are members of set - null cant be a member */
+	while( *setp )
+		/* member this one? */
+		if( mem == *setp++ )
+			return( mem );
+
+	/* no matches return 0 */
+	return( 0 );
+}
+
+/*
+	N U M B E R	-	does an ascii(octal) to bin conversion 
+*/
+
+number()
+{
+
+	register char *digit;
+	register num;
+
+	digit = getoken();		/* get ascii string */
+	num = 0;			/* initialize the bin result */
+
+	while( *digit )			/* should be a null terminated str */
+	{
+		num =<< 3;		/* move last number over an octade */
+		num =+ (*digit++ & 07 );	/* stick in new octade */
+	}
+	return( num );
+}
+
+/*
+
+	B I T _ O N			takes care of checkin whether a bit is on
+					bit bitnum in map bitstr
+*/
+
+bit_on( bitnum,bitstr )
+int bitnum;
+char *bitstr;
+{
+	return( bitmask[ bitnum&07 ] & bitstr[ bitnum>>3 ] );
+}
+
+/*
+
+
+	S E T _ B I T			sets bit bitnum in map bitstr
+
+*/
+
+set_bit( bitnum,bitstr )
+int bitnum;
+char *bitstr;
+{
+
+	bitstr[ bitnum>>3 ] =| bitmask[ bitnum&07 ];
+}
+
+
+
+/*
+
+
+	R E S E T _ B I T		reset bit bitnum in map bitstr
+
+*/
+
+reset_bit( bitnum,bitstr )
+int  bitnum;
+char *bitstr;
+{
+	bitstr[ bitnum>>3 ] =& ~bitmask[ bitnum&07 ];
+}
+
+/*
+
+	C O L O N			scans from ptr passed to a colon
+					returns next char passed colon
+
+*/
+char *colon( buf )
+char *buf;
+{
+
+	register char *bufp;
+
+	bufp = buf;
+	while( *bufp++ != ':' );
+	return( bufp );
+}
+/*
+
+	G E T H O M E D I R		based on the current UID, searches the
+					password file for a match, returns a
+					pointer into the buf passed which
+					is the start of the home directory
+					for the user.  Used to build a path-
+					name for the character set file
+*/
+
+char *gethomedir( buf )
+char *buf;
+{
+
+	extern fin;
+	register char *bufp;
+	register int  uid;
+	register char c;
+	int     curuid;
+
+	/* open the password file */
+	if( (fin = open( "/etc/passwd",0 )) < 0 )
+		return( 0 );
+
+	curuid = (getuid())&0377;	/* get hard user id */
+	while( 1 )
+	{
+		bufp = buf;		/* point to beginning of area */
+		/* get a full line */
+		while( (c=getchar()) != '\n' )
+		{
+			/* get EOF ? */
+			if( c <= 0 )
+				return( 0 );	/* return failure */
+			*bufp++ = c;
+		}
+		/* space over to uid part of password entry */
+		bufp = colon( colon( buf ) );
+		/* turn ascii uid into binary */
+		uid = 0;
+		while( *bufp != ':' )
+			uid = uid*10 + *bufp++ - '0';
+		/* match current uid ? */
+		if( uid == curuid )
+			/* a winnah */
+			return( colon( colon( ++bufp )));
+	}
+}
+/* 
+   command array for procedure addresses to be called in response to the
+   above command strings
+*/
+int (*decode_command[]) ()
+{
+	&execute,			/* the default - exec unix command */
+	&netopen,			/* open a net connection */
+	&netclose,			/* close a net connection */
+	&bye,				/* exit this program restoring tty */
+	&bye,				/* bye alais */
+	&set_charmode,			/* force character mode */
+	&set_msgmode,			/* force wait until full line input */
+	&set_flagchar,			/* reset the flag character */
+	&set_endline,			/* set the endline character */
+	&prtfile,			/* print the help file */
+	&send_proto,			/* send a telnet break */
+	&send_proto,			/* send a telnet abort output */
+	&send_proto,			/* send a telnet are you there */
+	&send_proto,			/* send a telnet go ahead */
+	&send_proto,			/* send a telnet interrupt process */
+	&send_synch,			/* send telnet synch sequence */
+	&set_echo,			/* turn echomode on or off */
+	&load_char_set,			/* load the character set */
+	&tenex_mode,			/* go into tenex mode */
+	&delay,				/* wait a number of secs */
+	&set_echo,			/* off same as echo off */
+	&set_echo,			/* on  same as echo on */
+	     0
+};
+

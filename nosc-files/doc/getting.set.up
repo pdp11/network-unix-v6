@@ -1,0 +1,98 @@
+This note describes the expected environment that this distribution expects
+to live in, and what must be done to a standard vanilla V6 Unix in order to
+build a network system.
+
+The code is distributed in unrooted form; that is, only partial pathnames
+are used.  The set of directory names reflects an organization similar to
+a standard V6 system.  The first-level directories are those that you would
+expect to find in either /usr/sys or /usr/source.  (Since the source site
+for this stuff can only afford a single mounted filesystem for sources, we
+keep in all in /usr/sys.  This causes some confusion for the files normally
+in /usr/source, but hang in there -- it all works out.)  The directories
+in the distribution normally found in /usr/sys are h, conf, ken, dmr, ncpk,
+and ncpd.  The directories normally found in /usr/source are ncpp, and s?.
+The sources in /usr/sys are those files sufficient to prepare a runnable
+kernel and NCP daemon.  The sources in /usr/source are the network-related
+programs (server daemons, user programs, utilities, etc.) and those programs
+which are either different (modified) from the Bell distribution or not
+included in it in the first place.  (The latter programs come from many
+sources; we only serve as a retransmission point.)
+
+To get going, there are a number of things that must be done.  First, the
+vanilla C compiler doesn't have a large enough symbol table for some of
+the network modules, so it must be expanded.  A new C supervisor is in
+s1/cc.c; this should be compiled and installed.  It is upward compatible
+from the V6 distribution, and a number of the shell files expect it.
+
+((Other C modules that were changed?  Check with Glen.))
+
+Also included as s1/sh.c is a modified version of the Yale shell.  The major
+thing that has been done to it is that it now checks for new mail just prior
+to printing out the prompt.  This is very useful in a network environment,
+where mail can come from the blue and need to be acted upon.
+
+Obviously, if the shell now checks for the mail, login needn't.  The source
+for a much-modified login responder is located in s1/login.c.  It does a
+number things that the original did not.  As far as vanilla operation is
+concerned, you shouldn't be able to tell the difference.  However, it gives
+a great deal more flexibility in terms of controlling the user's view of
+the system.  The differences are the subject of another documentation file.
+
+((Other things.))
+
+Now you are ready to try to build system.  There is a shell file named
+'compile' that controlls the whole operation.  It compiles a complete new
+system based upon the contents of a directory whose name you specify.  The
+directory contains:
+	. a file named 'configuration' that specifies which devices are
+	  to be included.
+	. a file named 'conf.mod' that is used to tailor the configuration
+	  files that result from running 'configuration' into mkconf.
+	. any *.h files that are specific to this configuration.  Usually
+	  this means (at least) param.h.
+	. any *.c files that are specific to this configuration.
+
+The 'configuration' file is passed to mkconf, which produces as output two
+files: c.c and l.s.  The former is the initialization for the bdevsw and
+cdevsw tables, and hence control the meaning of the major device numbers.
+The distribution mkconf also includes initialization for nblkdev and nchrdev.
+
+The l.s file is an assembler file that contains the low core interrupt
+vectors and the interfaces to the machine-assist module (mch.c).  The
+distribution mkconf plugs all the undefined locations with a transfer to
+a routine that displays a message and proceeds.  It keeps the system from
+crashing.
+
+Since mkconf is somewhat inflexible about what it will generate where, you
+may want to edit c.c and l.s before they are actually compiled/assembled.
+So, after they are generated from the 'configuration' file, the editor is
+entered with 'conf.mod' as a script.  Here you can make any changes to the
+files that you wish.  (This file is actually optional; if it is not present,
+c.c and l.s are used as is.)  Since the filename is NOT specified, you must
+use a "e c.c" to get c.c, make whatever changes you want, write it back out,
+use a "e l.s" to get l.s, etc.  This is a very powerful feature, but you must
+really know what you are doing in order to make it work.  Use it with care.
+
+The remainder of the files that are compiled and included in the system are
+subject to a search order.  The theory is that there are really three levels
+of "interesting" sources.  First, there may be sources that are special to
+one system.  These may either be custom-tailored modules that provide some
+special function, or a pre-release of new system modules (this is how I test
+new modules before I let other people try them).  Then there may be a set of
+sources that represent the current "working" system.  Beyond that there is
+the baseline "backup" system that represents the solid, reilable system.
+The compile file reflects this ordering by searching a series of directories
+to find each module to be compiled.  It first searches the directory that
+the compile is relative to, then a local subdirectory with the same name as
+the system directory, and finally the system directory (which, as you recall,
+is /usr/sys).  Thus, if the compile is relative to the 'test' directory, and
+bio.c of the 'dmr' directory is to be compiled, it will first look for
+test/bio.c, then dmr/bio.c, and finally /usr/sys/dmr/bio.c to find the file
+to be compiled.
+
+The #included *.h files are subject to a similar search order.  The compiler
+supports the search order directly via an option.  In this case, the search
+order is 'test', 'h', '/usr/sys/h', and finally '/usr/include'.  The last
+one is present since that's where V7 systems keep their #include files.
+
+

@@ -1,0 +1,6 @@
+load -t submit mailsubs hostrans \
+	tailor \
+	nlibff.a \
+	mailib.a \
+    | tee errlst
+if -r a.out mv a.out submit

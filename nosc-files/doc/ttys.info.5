@@ -1,0 +1,101 @@
+.th TTYS.INFO V 5/10/79
+.sh NAME
+ttys.info \*- typewriter initialization data
+.sh DESCRIPTION
+The
+.it ttys.info
+file is read by the
+.it getty
+program and specifies
+the mode and speeds to try for a typewriter line.
+.s3
+The file consists of two parts, seperated by a blank line.
+The first part consists of the
+.it "global messages"
+and the second part consists of the
+.it "cyclic groups."
+.s3
+The global messages are common text strings that can be referenced
+through a shorthand convention.  One message is present per line.
+Leading white space (blanks and tabs) is striped off.
+The permitted content of these messages, and the escape conventions
+possible, are discussed below.
+There are a maximum of nine global messages, one through nine.
+The zeroth global message it automaticly defined to be
+``\\r\\nLogin: \\7\\7''
+-- that is, type the login herald on a line by itself
+and followed by two bells.
+.s3
+In the second part, blank lines, and any line beginning with an
+asterick are ignored.  The latter may be used for comments.
+It consists of a series of cyclic groups.
+The beginning of a cyclic group is identified by a line with a
+non-whitespace character in column one.
+It continues until the beginning of another cyclic group or to
+the end-of-file.
+Each cyclic group consists of a set of lines, with each line
+containing five fields.
+Note that the lines must begin with a whitespace character or they
+will be considered the beginning of a cyclic group.
+.s3
+The five fields are: input speed, output speed, initial flags,
+final flags/login option, and message.
+The first two fields must be either: (a) a decimal number less than fifty,
+or (b) one of the numbers 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800,
+2400, 4800, or 9600.  In the latter case, it is converted into the
+corresponding speed value.
+.s3
+The third field and possibly the fourth field consists of a series of
+options seperated by a plus (`+') sign.
+The options, and their meanings are:
+	odd  -- odd parity permitted
+	even -- permit even parity
+	any  -- permit either parity
+	lf   -- treat <cr> and <lf> as identical
+	echo -- echo back every character typed
+	lc   -- map upper case to lower case
+	tab  -- replace tabs by spaces when printing
+	hup -- hangup when done
+	cr1 cr2 cr3 -- select delay type for carriage return
+	nl1 nl2 nl3 -- select delay type for linefeed
+	tab1 tab2 tab3 -- select delay type for tab
+	ff1  -- select formfeed delay
+	bs1  -- select backspace delay
+
+If no option is desired, the special option ``null'' should be used.
+.s3
+If the fourth field is not a flag value, it must be of the form
+``login=name'' and will cause
+.it getty
+to immediately invoke
+.it login
+with ``name'' as the value.
+.s3
+The fifth field is the message to be displayed after the speeds and initial
+flags have been set.
+It is a C-style string, with the following escapes recoginzed:
+	(a) \\r, \\n, \\b, \\\\ are translated into <carriage-return>,
+<new-line>, <backspace>, and <backslant>.
+	(b) \\<octal-number> is translated into the character corresponding
+to <octal-number>
+	(c) \\m<digit> causes the <digit>th global message to be expanded.
+	(d) \\s<digit> causes the process to sleep for <digit> seconds.
+	(e) \\<char> will print <char>.
+
+Any other character is just copied into the output.
+.s3
+Examples:
+.s3
+The handling of the dial-up line described in
+.it getty
+(VIII) is done by:
+.s3
+ \\r\\n\\33\\:\\6\\6\\17\\m0
+		-- notice the blank line is required!
+ 0\ 300	300	any+nl1+cr1	any+echo+lf+tab+cr1	\\r\\n\\33;\\m0
+   150	150	any+nl1+cr1	even+echo+ff1+cr2+tab1+nl1	\\m1
+   110	110	any+nl1+cr1	any+echo+lf+tab+cr1	\\r\\n\\33;\\m0
+.sh FILES
+/etc/ttys.info
+.sh "SEE ALSO"
+getty (VIII)

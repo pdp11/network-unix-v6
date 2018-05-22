@@ -1,0 +1,159 @@
+: compile [ SYSTEM-DIR ] [ load [ UNIX-NAME ] ]
+: SYSTEM-DIR may not be "load"
+: SYSTEM-DIR is the directory to which the compile will be relative
+: load [ UNIX-NAME ] causes an attempt to load a system via loadit
+
+if -r /usr/sys/conf/mkconf -a -r /usr/sys/conf/isconf -a \
+   -r /usr/sys/conf/sysfix goto setup
+echo "To compile, the files mkconf, isconf, and sysfix must be in the"
+echo "/usr/sys/conf directory.  At least one of these files is missing."
+exit
+: begin
+
+set A = wk
+if $1x = x goto startit
+if $1 = load goto startit
+set A = $1
+shift
+: startit
+
+
+echo configuring $A
+date
+if ! -r $A mkdir $A
+if ! -r $A exit;: it failed
+chmod 751 $A
+if -r $A/configuration goto std
+echo "rk" >$A/configuration
+if -r $A/configuration goto std
+echo "couldn't create default configuration file -- quitting"
+exit
+: std
+if -r $A/lib rm -f $A/lib
+/usr/sys/conf/mkconf <$A/configuration
+if -r $A/conf.mod sh -c "ed - <"$A"/conf.mod"
+echo l.o:
+	as l.s
+	if -r $A/l.o rm -f $A/l.o
+	mv a.out $A/l.o
+	rm -f l.s
+echo c.o:
+	cc -c -O c.c
+	if -r $A/c.o rm -f $A/c.o
+	mv c.o $A/c.o
+	rm -f c.c
+sh /tmp/:compile: $A conf -P mch
+chmod 644 $A/l.o $A/c.o $A/lib
+
+echo Unix kernel code:
+date
+sh /tmp/:compile: $A ken \
+	main	alloc	iget	prf	rdwri	slp	subr	text	\
+	trap	sig	sysent	clock	fio	malloc	nami	pipe	\
+	sys1	sys2	sys3	sys4	acct	badint
+
+echo NCP resident code:
+date
+sh /tmp/:compile: $A ncpk nrdwr nopcls contab kerbuf ncpio btest
+sh /tmp/:compile: $A ncpk -P itol
+
+echo Unix device drivers:
+date
+: default device drivers -- always present
+sh /tmp/:compile: $A dmr bio tty partab kl mem sys
+: block device drivers -- disks and tapes
+if { /usr/sys/conf/isconf $A/configuration rk } sh /tmp/:compile: $A dmr rk
+if { /usr/sys/conf/isconf $A/configuration si } sh /tmp/:compile: $A dmr si
+if { /usr/sys/conf/isconf $A/configuration rp } sh /tmp/:compile: $A dmr rp
+if { /usr/sys/conf/isconf $A/configuration hp } sh /tmp/:compile: $A dmr hp
+if { /usr/sys/conf/isconf $A/configuration rf } sh /tmp/:compile: $A dmr rf
+if { /usr/sys/conf/isconf $A/configuration hs } sh /tmp/:compile: $A dmr hs
+if { /usr/sys/conf/isconf $A/configuration rl } sh /tmp/:compile: $A dmr rl
+if { /usr/sys/conf/isconf $A/configuration rx } sh /tmp/:compile: $A dmr rx
+if { /usr/sys/conf/isconf $A/configuration tm } sh /tmp/:compile: $A dmr tm
+if { /usr/sys/conf/isconf $A/configuration ht } sh /tmp/:compile: $A dmr ht
+if { /usr/sys/conf/isconf $A/configuration tc } sh /tmp/:compile: $A dmr tc
+sh /tmp/:compile: $A dmr devstart rhstart
+: character device drivers -- tty-like devices
+if { /usr/sys/conf/isconf $A/configuration dh } sh /tmp/:compile: $A dmr dhdm dh dhfdm
+if { /usr/sys/conf/isconf $A/configuration dj } sh /tmp/:compile: $A dmr dj
+if { /usr/sys/conf/isconf $A/configuration dz } sh /tmp/:compile: $A dmr dz
+if { /usr/sys/conf/isconf $A/configuration dc } sh /tmp/:compile: $A dmr dc
+if { /usr/sys/conf/isconf $A/configuration ptyc } sh /tmp/:compile: $A dmr pty
+: character device drivers -- communication line drivers
+if { /usr/sys/conf/isconf $A/configuration dq } sh /tmp/:compile: $A dmr dq
+if { /usr/sys/conf/isconf $A/configuration du } sh /tmp/:compile: $A dmr du
+if { /usr/sys/conf/isconf $A/configuration dp } sh /tmp/:compile: $A dmr dp
+: character device drivers -- all other devices
+if { /usr/sys/conf/isconf $A/configuration lp } sh /tmp/:compile: $A dmr lp
+if { /usr/sys/conf/isconf $A/configuration cr } sh /tmp/:compile: $A dmr cr
+if { /usr/sys/conf/isconf $A/configuration pc } sh /tmp/:compile: $A dmr pc
+if { /usr/sys/conf/isconf $A/configuration dn } sh /tmp/:compile: $A dmr dn
+
+echo IMP driver code:
+date
+if ! { /usr/sys/conf/isconf $A/configuration vdh } goto notvdh
+	sh /tmp/:compile: $A dvr vdhio vdh
+	sh /tmp/:compile: $A dvr -P vdh_swabuf vdh_clock
+	goto vdhdone
+: notvdh
+	sh /tmp/:compile: $A dvr impio
+	if { /usr/sys/conf/isconf $A/configuration acc } \
+		sh /tmp/:compile: $A dvr acc
+	: LATER ill
+	if { /usr/sys/conf/isconf $A/configuration imp } \
+		sh /tmp/:compile: $A dvr imp11a
+: vdhdone
+
+: this should be at the very end of the last archive library
+sh /tmp/:compile: $A dvr -P CKSUM TRACE
+
+rm -f /tmp/:compile:
+
+if $1x = loadx sh loadit $A $2
+echo done!
+date
+exit
+
+: setup
+cat >/tmp/:compile:;goto begin
+set A = $1
+set B = $2
+if $B != dvr goto notdvr
+set B = ncpk/drivers
+: notdvr
+if $3x != -Px goto loop
+set P = -P
+shift
+: loop
+if $3x = x exit
+shift
+set D = $A/
+if -r $D$2.c goto compile
+set D = $B/
+if -r $D$2.c goto compile
+set D = /usr/sys/$D
+if -r $D$2.c goto compile
+echo $B/$2.c: module not found -- dummy module included
+: comperr
+as /dev/null
+mv a.out $2.o
+goto comptest
+: compile
+echo $B/$2: found as $D$2.c
+cc -O -c -L$A:h:$B:/usr/sys/h:/usr/sys/$B:/usr/include $P $D$2.c
+if $Px != -Px goto comptest
+if ! -r $2.i cp $D$2.c $2.i
+as $2.i
+rm -f $2.i
+if ! -r a.out goto loop
+mv a.out $2.o
+: comptest
+if ! -r $2.o goto compfail
+size $2.o
+ar r $A/lib $2.o
+rm -f $2.o
+goto loop
+: compfail
+echo "Compile failed -- placeholder included"
+goto comperr

@@ -1,0 +1,5 @@
+if -r undelete rm undelete
+load -n undelete subs.a strings.a wait -O libg.a libh.a libg.a
+if -r a.out mv a.out undelete
+:					fini
+

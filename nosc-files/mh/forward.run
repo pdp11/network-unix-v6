@@ -1,0 +1,6 @@
+if -r forward rm forward
+load -n forward annotate subs.a strings.a wait \
+	-O libg.a libh.a libg.a
+if -r a.out mv a.out forward
+:					fini
+

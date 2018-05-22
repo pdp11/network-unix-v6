@@ -1,0 +1,10 @@
+rm mailer.h
+ln mailer-ec.h mailer.h
+if -r remsnd-ec rm remsnd-ec
+load -t -O remsnd hostrans sndsubs mailsubs tailor-ec wait              \
+	./dialdir/dl_lib \
+	utilib.a nlibff.a                    \
+	| tee errlst
+mv a.out remsnd-ec
+rm mailer.h
+ln mailer-wc.h mailer.h

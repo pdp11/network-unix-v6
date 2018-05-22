@@ -1,0 +1,422 @@
+25-Apr-79 14:08:25-PST,3074;000000000001
+Mail from NOSC-SDL rcvd at 25-Apr-79 1407-PST
+Date: 25 Apr 1979 at 1257-PST
+From: greg at NOSC-SDL
+Subject: incremental distribution log
+To: /usr/net/ml.dist.people:
+
+The new system has been very stable this week, so I think I'll distribute it
+next week.  I would have done it this week but I'm going skiing for four days
+(through Tuesday) so I wouldn't be around if any problems cropped up during
+the weekend.  Only one problem has surfaced that may or may not be related to
+the new code:  occasionally a process will suddenly ignore all interrupts.  It
+appears to be random in nature, and it's something I've seen in the old system,
+but it seems to happen much more frequently now.  It will give me something to
+work on when I get back.
+
+It seemed very awkward to only permit the super-user to log in when /shutsw
+was set -- one would like to also permit specific "trusted" users to login
+as well.  So, any user in the system group (GID zero) is permitted to login
+even if /shutsw is set.
+
+Defining the system group to be the "trusted" users seemed so obvious that
+su now uses the same mechanism.  This eliminates the need for the site-
+specific su.h (with the list of trusted users), so it should be deleted.
+Since this would therefore leave su.c in a directory by itself (s2/su),
+it should be promoted out into its ancestor directory (s2) and the sub-
+directory deleted.  See Dist.Maint below for details.
+
+Old business -- the NCP deamon released last time has been running with
+no problems.  The only problem encountered was the old one concerning the
+incorrect optimization of the register quantities, so I changed send_pro.c
+to avoid the problem.  The ideal solution would be to fix the compiler,
+but I don't have anything like the necessary time, and nobody else seems
+willing.  It's a pity, since we will continue to be bitten by this bug
+until the compiler does it right.  (Sigh.)
+
+Ron Broersma of NOSC-CC has made some changes "to fix some problems we have
+been experiencing" with the host.c program.  I don't know what was changed.
+
+doc/C.compiler.bug: module found as doc/C.compiler.bug
+doc/tty.chars.lost: module found as doc/tty.chars.lost
+doc/getting.set.up: module found as doc/getting.set.up
+compile: module found as compile
+install: module found as install
+mem.c: module not found -- not shipped * * * * * * * * * * * * * * *
+acc.c: module found as /usr/sys/ncpk/drivers/acc.c
+send_pro.c: module found as /usr/sys/ncpd/send_pro.c
+alarm.s: module not found -- not shipped * * * * * * * * * * * * * * *
+host.c: module found as /usr/sys/ncpp/host/host.c
+cc.c: module found as /usr/sys/s1/cc.c
+login.c: module found as /usr/sys/s1/login/login.c
+su.c: module found as /usr/sys/s2/su.c
+
+if -r /usr/bin/ed su mv /usr/bin/ed /bin/ed
+if -r /usr/bin/e  su mv /usr/bin/e  /bin/e
+if ! -r doc mkdir doc
+chmod 755 doc
+if -r ncpp/alarm.s rm -f ncpp/alarm.s
+if -r ncpd/utilities.c rm -f ncpd/utilities.c
+if -r s2/su/su.c mv s2/su/su.c s2/su.c
+if -r s2/su/su.h rm -f s2/su/su.h
+if -r s2/su rmdir s2/su
+-------
+26-Apr-79 17:45:06-PST,510;000000000001
+Mail from NOSC-SDL rcvd at 26-Apr-79 1745-PST
+Date: 26 Apr 1979 at 1730-PST
+From: greg at NOSC-SDL
+Subject: *W*A*R*N*I*N*G* Major transmission comming
+To: /usr/net/ml.dist.people:
+
+This weekend will be a major new release of code.  Almost all of the kernel
+modules will be updated.  This will mean that those of you who recieve source
+will have to make sure that the filesystem to which the source mail is sent
+has at least 1000 blocks of storage available.  Please be ready.  Tks.  -- Greg
+-------
+ 1-May-79 06:34:35-PDT,4025;000000000001
+Mail from NOSC-SDL rcvd at 1-May-79 0633-PDT
+Date:  1 May 1979 at 0346-PDT
+From: greg at NOSC-SDL
+Subject: incremental distribution log
+To: /usr/net/ml.dist.people:
+
+doc/C.compiler.bug: module found as doc/C.compiler.bug
+doc/tty.chars.lost: module found as doc/tty.chars.lost
+doc/getting.set.up: module found as doc/getting.set.up
+compile: module found as compile
+mch.c: module found as /usr/sys/conf/mch.c
+buf.h: module found as /usr/sys/h/buf.h
+file.h: module found as /usr/sys/h/file.h
+filsys.h: module found as /usr/sys/h/filsys.h
+inode.h: module found as /usr/sys/h/inode.h
+proc.h: module found as /usr/sys/h/proc.h
+systm.h: module found as /usr/sys/h/systm.h
+text.h: module found as /usr/sys/h/text.h
+main.c: module found as /usr/sys/ken/main.c
+alloc.c: module found as /usr/sys/ken/alloc.c
+iget.c: module found as /usr/sys/ken/iget.c
+prf.c: module found as /usr/sys/ken/prf.c
+rdwri.c: module found as /usr/sys/ken/rdwri.c
+slp.c: module found as /usr/sys/ken/slp.c
+subr.c: module found as /usr/sys/ken/subr.c
+trap.c: module found as /usr/sys/ken/trap.c
+sig.c: module found as /usr/sys/ken/sig.c
+sysent.c: module found as /usr/sys/ken/sysent.c
+clock.c: module found as /usr/sys/ken/clock.c
+fio.c: module found as /usr/sys/ken/fio.c
+nami.c: module found as /usr/sys/ken/nami.c
+pipe.c: module found as /usr/sys/ken/pipe.c
+sys1.c: module found as /usr/sys/ken/sys1.c
+sys2.c: module found as /usr/sys/ken/sys2.c
+sys3.c: module found as /usr/sys/ken/sys3.c
+sys4.c: module found as /usr/sys/ken/sys4.c
+acct.c: module found as /usr/sys/ken/acct.c
+badint.c: module found as /usr/sys/ken/badint.c
+bio.c: module found as /usr/sys/dmr/bio.c
+hs.c: module found as /usr/sys/dmr/hs.c
+tc.c: module found as /usr/sys/dmr/tc.c
+tm.c: module found as /usr/sys/dmr/tm.c
+rhstart.c: module found as /usr/sys/dmr/rhstart.c
+tty.c: module found as /usr/sys/dmr/tty.c
+dhdm.c: module found as /usr/sys/dmr/dhdm.c
+dh.c: module found as /usr/sys/dmr/dh.c
+mem.c: module found as /usr/sys/dmr/mem.c
+net_contab.h: module found as /usr/sys/h/net_contab.h
+net_hosthost.h: module found as /usr/sys/h/net_hosthost.h
+net_ncp.h: module found as /usr/sys/h/net_ncp.h
+net_net.h: module found as /usr/sys/h/net_net.h
+bad free block (28767)
+bad free count
+bad free count
+bad free count
+bad free count
+bad free block (10)
+net_netbuf.h: module found as /usr/sys/h/net_netbuf.h
+bad free count
+net_open.h: module found as /usr/sys/h/net_open.h
+nrdwr.c: module found as /usr/sys/ncpk/nrdwr.c
+bad free count
+bad free count
+bad free count
+bad free count
+bad free count
+nopcls.c: module found as /usr/sys/ncpk/nopcls.c
+bad free count
+kerbuf.c: module found as /usr/sys/ncpk/kerbuf.c
+bad free block (25726)
+bad free count
+bad free block (12876)
+ncpio.c: module found as /usr/sys/ncpk/ncpio.c
+bad free count
+net_vdh_imp.h: module found as /usr/sys/ncpk/drivers/net_vdh_imp.h
+net_vdh.h: module found as /usr/sys/ncpk/drivers/net_vdh.h
+net_vdhstat.h: module found as /usr/sys/ncpk/drivers/net_vdhstat.h
+vdhio.c: module found as /usr/sys/ncpk/drivers/vdhio.c
+vdh.c: module found as /usr/sys/ncpk/drivers/vdh.c
+net_imp.h: module found as /usr/sys/ncpk/drivers/net_imp.h
+impio.c: module found as /usr/sys/ncpk/drivers/impio.c
+net_acc.h: module found as /usr/sys/ncpk/drivers/net_acc.h
+acc.c: module found as /usr/sys/ncpk/drivers/acc.c
+net_ill.h: module found as /usr/sys/ncpk/drivers/net_ill.h
+ill.c: module found as /usr/sys/ncpk/drivers/ill.c
+net_imp11a.h: module found as /usr/sys/ncpk/drivers/net_imp11a.h
+imp11a.c: module found as /usr/sys/ncpk/drivers/imp11a.c
+TRACE.c: module found as /usr/sys/ncpk/drivers/TRACE.c
+open.h: module not found -- not shipped * * * * * * * * * * * * * * *
+telnet.h: module not found -- not shipped * * * * * * * * * * * * * * *
+mkcharset.h: module not found -- not shipped * * * * * * * * * * * * * * *
+mailer.c: module found as /usr/sys/ncpp/mail/mailer.c
+dd.c: module found as /usr/sys/s1/dd.c
+su.c: module found as /usr/sys/s2/su.c
+
+-------
+ 1-May-79 22:44:04-PDT,924;000000000000
+Mail from NOSC-SDL rcvd at 1-May-79 2243-PDT
+Date:  1 May 1979 at 2232-PDT
+From: greg at NOSC-SDL
+Subject: Comments on incremental shipment
+To: /usr/net/ml.dist.people:
+
+(Whew!)  Well, we finally got this week's distribution out.  As you can see,
+it contained most of the modules in h, ken, dmr, and ncpk.  In the interests
+of making sure everybody is consistant, next weekend I'm going to ship all
+the modules that WEREN'T shiped this weekend.  That will amount to a large
+list, but not as large as we just survived.
+
+The changes:  after introducing all that paranoia in the mailer, I made
+some changes to make it, if not less paranoid, at least less critical.
+It now correctly handles transient errors from the remote server by
+requeueing the message for later handling instead of returning it to the
+sender.
+
+The other two had changes made in the installation sections, both small.
+
+-- Greg
+-------
+ 6-May-79 01:08:53-PDT,4377;000000000000
+Mail from NOSC-SDL rcvd at 6-May-79 0108-PDT
+Date:  5 May 1979 at 2252-PDT
+From: greg at NOSC-SDL
+Subject: incremental distribution log
+To: /usr/net/ml.dist.people:
+
+This week we have the remaining modules that we didn't ship last week.
+This new system changes some names.  Conf/m40.c has been mereged with
+the m45 routines and the code made selectable; it is now called mch.c.
+The previous ken/backc.c has been placed in conf/mch.c, so it can now
+be deleted.  The fancy queueing routines in util*.c have been found to
+take more time than they saved, so they have been removed.  Dmr/mem40.c
+has had the mem45.c code included (selectable, of course) and is now
+called just mem.c.  (The code for /dev/imem is now automatically included
+on a /45-class machine.  It is the same as /dev/kmem on a /40-class
+machine.)  The header files used by the network (which used to reside in
+h/net) have been moved into the h directory with a net_ prefix.  The
+Dist.Maint code below removes the old versions; the new version have
+been shipped.
+
+The routine that reads the time from time-server hosts has been made
+more robust.  Since the NCP doesn't support timeouts on direct connection
+requests, there were several cases where the open request could wedge
+up and hang forever.  It now sets a timer before attempting the open;
+this effectivly provides our own timeout function.
+
+Dave Brown of NCSC has discovered that the new NCP daemon doesn't work
+properly unless the daemon user can execute /usr/net/etc/largedaemon
+and can write on /etc/host_status.  A new linkit now installs the NCP
+large and small daemons as owned by daemon.  Dist.Maint below changes
+that and also changes the ownership of /etc/host_status.  Don't try
+the new NCP until you have done this!
+
+compile: module found as compile
+loadit: module found as loadit
+acct.h: module found as /usr/sys/h/acct.h
+conf.h: module found as /usr/sys/h/conf.h
+dinode.h: module found as /usr/sys/h/dinode.h
+ino.h: module found as /usr/sys/h/ino.h
+reg.h: module found as /usr/sys/h/reg.h
+seg.h: module found as /usr/sys/h/seg.h
+tty.h: module found as /usr/sys/h/tty.h
+user.h: module found as /usr/sys/h/user.h
+text.c: module found as /usr/sys/ken/text.c
+malloc.c: module found as /usr/sys/ken/malloc.c
+hp.c: module found as /usr/sys/dmr/hp.c
+rf.c: module found as /usr/sys/dmr/rf.c
+rk.c: module found as /usr/sys/dmr/rk.c
+rp.c: module found as /usr/sys/dmr/rp.c
+si.c: module found as /usr/sys/dmr/si.c
+ht.c: module found as /usr/sys/dmr/ht.c
+devstart.c: module found as /usr/sys/dmr/devstart.c
+partab.c: module found as /usr/sys/dmr/partab.c
+dhfdm.c: module found as /usr/sys/dmr/dhfdm.c
+dz.c: module found as /usr/sys/dmr/dz.c
+kl.c: module found as /usr/sys/dmr/kl.c
+pty.c: module found as /usr/sys/dmr/pty.c
+sys.c: module found as /usr/sys/dmr/sys.c
+cr.c: module found as /usr/sys/dmr/cr.c
+lp.c: module found as /usr/sys/dmr/lp.c
+pc.c: module found as /usr/sys/dmr/pc.c
+contab.c: module found as /usr/sys/ncpk/contab.c
+btest.c: module found as /usr/sys/ncpk/btest.c
+itol.c: module found as /usr/sys/ncpk/itol.c
+vdh_swabuf.c: module found as /usr/sys/ncpk/drivers/vdh_swabuf.c
+vdh_clock.c: module found as /usr/sys/ncpk/drivers/vdh_clock.c
+CKSUM.c: module found as /usr/sys/ncpk/drivers/CKSUM.c
+linkit: module found as /usr/sys/ncpd/linkit
+net_telnet.h: module found as /usr/sys/h/net_telnet.h
+net_mcharset.h: module found as /usr/sys/h/net_mcharset.h
+getdate2.c: module found as /usr/sys/ncpp/getdate2.c
+mailer.c: module found as /usr/sys/ncpp/mail/mailer.c
+
+if -r conf/m40.c rm -f conf/m40.c
+if -r dmr/backc.c rm -f dmr/backc.c
+if -r dmr/mem40.c rm -f dmr/mem40.c
+if -r dmr/mem45.c rm -f dmr/mem45.c
+if -r ken/util.c rm -f ken/util.c
+if -r ken/utilA.c rm -f ken/utilA.c
+if -r ken/utilB.c rm -f ken/utilB.c
+if -r h/net/contab.h rm -f h/net/contab.h
+if -r h/net/hosthost.h rm -f h/net/hosthost.h
+if -r h/net/ncp.h rm -f h/net/ncp.h
+if -r h/net/net.h rm -f h/net/net.h
+if -r h/net/netbuf.h rm -f h/net/netbuf.h
+if -r h/net/netopen.h rm -f h/net/netopen.h
+if -r h/net/open.h rm -f h/net/open.h
+if -r h/net/openparam.h rm -f h/net/openparam.h
+if -r /usr/net/etc/smalldaemon su chown daemon /usr/net/etc/smalldaemon
+if -r /usr/net/etc/largedaemon su chown daemon /usr/net/etc/largedaemon
+if -r /etc/host_status su chown daemon /etc/host_status
+-------
+12-May-79 08:59:49-PDT,2697;000000000001
+Mail from NOSC-SDL rcvd at 12-May-79 0859-PDT
+Date: 12 May 1979 at 0337-PDT
+From: greg at NOSC-SDL
+Subject: incremental distribution log
+To: /usr/net/ml.dist.people:
+
+The biggie this week is a new getty.  Instead of having the tty initialization
+data compiled into the program, this version reads the information from a file.
+This means that the program can be maintained indepententally of the way that
+ttys are actually treated.  It is documented in getty.8 and ttys.info.5.  The
+only new feature that is available from the user's point of view is that if
+hup is set in the initial flags, getty will hangup if no progress is made in
+typing in the name (i.e., no name typed within sixty seconds).  A prototype
+/etc/ttys.info file is available upon request.
+
+A new login continues this trend.  It also supports the timeout feature if
+hup was set for getty, or if hup is set when it was called.  Hopefully, the
+same sort of feature will be put in the shell shortly.
+
+Dd has been modified so that if an of= option is present, the execution
+diagnostics appear on the standard output.  If no of= is present, the output
+will appear on the diagnostic output.  Errors encountered in the paramters
+still are printed on the standard output.
+
+A new version of newer.c that permits multiple sources to be specified for
+a single object.  It returns true if all of the sources are present and
+either (a) the object is missing, or (b) the newest source is newer than
+the object.
+
+New drivers -- one for the floppy disk (rx.c) and one for the RL01 (rl.c).
+The floppy driver has been in use at NOSC for a while now; the last bug
+seems to have been eradicated.  The RL driver has been run in a system
+generated for SRI-TSC; it seems to have been successful.
+
+A bug fix due to Sheldon Furst: if a connection bytesize was not eight,
+the bytesize on the command link concerning that connection was incorrect.
+
+doc/getty.8: module found as doc/getty.8
+doc/ttys.info.5: module found as doc/ttys.info.5
+rx.c: module found as /usr/sys/dmr/rx.c
+rl.c: module found as /usr/sys/dmr/rl.c
+kerbuf.c: module found as /usr/sys/ncpk/kerbuf.c
+io_buf.h: module found as /usr/sys/h/io_buf.h
+compile: module found as /usr/sys/ncpd/compile
+archive: module found as /usr/sys/ncpd/archive
+linkit: module found as /usr/sys/ncpd/linkit
+install: module found as /usr/sys/ncpd/install
+smalldaemon.c: module found as /usr/sys/ncpd/smalldaemon.c
+getdate2.c: module found as /usr/sys/ncpp/getdate2.c
+dd.c: module found as /usr/sys/s1/dd.c
+getty.c: module found as /usr/sys/s1/getty.c
+login.c: module found as /usr/sys/s1/login/login.c
+newer.c: module found as /usr/sys/s2/newer.c
+
+-------
+19-May-79 08:12:51-PDT,3692;000000000001
+Mail from NOSC-SDL rcvd at 19-May-79 0812-PDT
+Date: 19 May 1979 at 0320-PDT
+From: greg at NOSC-SDL
+Subject: incremental distribution log
+To: /usr/net/ml.dist.people:
+
+I suppose that all good things must come to an end.  In this case, I have
+been offered another job, and (assuming that a few minor thing can be worked
+out) I plan to accept it.  I have worked here eight years; I suppose it's
+time for a change.  Nalconites will immediately think of Doug Shannon and
+his famous truck, but it's not that bad.  My new job will be at NPRDC (another
+Navy lab in the San Diego area) and my first job there will be putting their
+PDP-11/70 on the ARPAnet.  It is my hope that I will be able to continue doing
+this distribution -- after all, it forces me to document what I'm doing and
+any manager will appreciate that!  I expect that there will be various disrup-
+tions during the transition (for example, both this machine and the NPRDC
+machine will be relocated in new buildings during the next few weeks), but
+if we perservere, it will work out.  My actual transfer isn't scheduled until
+the first of July, so there's still time to do some of the things that need
+to be done.
+
+Several changes this week:
+
+The definition of fsize in filsys.h and systm.h has been changed from a
+signed to an unsigned quantity so that icheck (and others) will correctly
+handle filesystems larger than 32765 blocks.  (S1/icheck.c should be
+recompiled.)
+
+Ron Broersma and I have found the problem with the VDH driver -- it turned
+out to be a hardware botch.  The code has been fixed for the VDH11C (since
+that interface permits the GO bit to be read); the problem is thought not
+to affect the VDH11E.
+
+It turns out that the FTP reply code to the mailer for "User Unknown" is in
+the TRANSIENT error sequence (there is an involved explanation as to why this
+is logical, but it is unexpected), so the change made last week will cause
+the mail to be requeued, and another transmission attempt made on the next
+cycle.  A special check had to be put in to treat this as a hard error.
+
+Acct.c has had the use of the Illinois queueing routines replaced by vanilla
+V6 code to accomplish the same ends.
+
+Dz.c has a bug fix due to Ron Kasik and Steve Schneller of NUSC-NPT; also the
+various options have been parameterized.
+
+Hp.c has some changes to handle multiple drives.
+
+Rl.c had a typo; our thanks to Ken Harrenstien of SRI-TSC for spotting it.
+
+Rx.c has the code for raw devices fixed.
+
+Tm.c now treats EOF markers more rationally:  reading an EOF returns EOF
+instead of ERR (zero not minus one); reading past an EOF on a cooked device
+returns ERR and the tape does not move; reading past an EOF on the raw
+device is legal and opens the next file; positioning on close for the non-
+rewind device now works correctly if you have just read an EOF.  I'd like
+to persuade the open routine to check for tape mounted/ring in on open,
+but I've been sitting on these mods too long, so I'll have to leave that
+for a later distribution.
+
+Srvrdaemon.c (the small guy for the FTP server) has the pathname for spawn.c
+changed into a relative name.
+
+filsys.h: module found as /usr/sys/h/filsys.h
+systm.h: module found as /usr/sys/h/systm.h
+acct.c: module found as /usr/sys/ken/acct.c
+hp.c: module found as /usr/sys/dmr/hp.c
+rx.c: module found as /usr/sys/dmr/rx.c
+rl.c: module found as /usr/sys/dmr/rl.c
+tm.c: module found as /usr/sys/dmr/tm.c
+dz.c: module found as /usr/sys/dmr/dz.c
+vdh.c: module found as /usr/sys/ncpk/drivers/vdh.c
+srvrdaemon.c: module found as /usr/sys/ncpp/ftp-s/srvrdaemon.c
+mailer.c: module found as /usr/sys/ncpp/mail/mailer.c
+
+-------
+    

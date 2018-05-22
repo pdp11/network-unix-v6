@@ -1,0 +1,5 @@
+if -r pickup rm pickup
+load -n pickup scansub subs.a strings.a putc wait -O libg.a libh.a
+if -r a.out mv a.out pickup
+:					fini
+

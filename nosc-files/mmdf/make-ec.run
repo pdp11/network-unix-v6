@@ -1,0 +1,6 @@
+sh deliver-ec.run
+mv deliver-ec /m/mmdf/deliver-ec
+sh remsnd-ec.run
+mv remsnd-ec /m/mmdf/remsnd-ec
+sh submit-ec.run
+mv submit-ec /m/mmdf/submit-ec

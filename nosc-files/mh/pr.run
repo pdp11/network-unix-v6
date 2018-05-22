@@ -1,0 +1,2 @@
+cc -n pr.c
+if -r a.out mv a.out pr

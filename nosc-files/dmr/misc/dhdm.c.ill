@@ -1,0 +1,125 @@
+#
+/*
+ */
+
+/*
+ *	DM-BB driver
+ */
+#include "/usr/sys/h/param.h"
+#include "/usr/sys/h/tty.h"
+#include "/usr/sys/h/conf.h"
+
+extern char dial[];
+#define	DMADDR	0170500
+
+struct	tty dh11[];
+int	ndh11;		/* Set by dh.c to number of lines */
+
+#define	DONE	0200
+#define	SCENABL	040
+#define SECINT	010000	/* secondary rcv transition */
+#define	SECRCV	020	/* secondary rcv status */
+#define	CLSCAN	01000
+#define	TURNON	07	/* RQ send, CD lead, line enable */
+#define	TURNOFF	1	/* line enable only */
+#define	CARRIER	0100
+
+struct dmregs {
+	int	dmcsr;
+	int	dmlstat;
+};
+
+/*
+ * Turn on the line associated with the (DH) device dev.
+ */
+dmopen(dev)
+{
+	register struct tty *tp;
+	register int line;
+
+	line = dev.d_minor;
+	if (line >= ndh11) line =- 16;
+	if (dev.d_minor >= 32) return;
+	tp = &dh11[dev.d_minor];
+	DMADDR->dmcsr = line;
+	DMADDR->dmlstat = TURNON;
+	if (dial[line] && (line == dev.d_minor)) {
+		if (DMADDR->dmlstat & SECRCV) {
+			tp->t_state =| CARR_ON;
+		}
+	} else {
+		if (DMADDR->dmlstat & CARRIER) {
+			tp->t_state =| CARR_ON;
+		}
+	}
+	DMADDR->dmcsr = IENABLE|SCENABL;
+	spl5();
+	while ((tp->t_state&CARR_ON)==0)
+		sleep(&tp->t_rawq, TTIPRI);
+	spl0();
+}
+
+/*
+ * If a DH line has the HUPCL mode,
+ * turn off carrier when it is closed.
+ */
+dmclose(dev)
+{
+	register struct tty *tp;
+	register int line;
+
+	line = dev.d_minor;
+	if (line >= ndh11) line =- 16;
+	if (dev.d_minor >= 32) return;
+	tp = &dh11[dev.d_minor];
+	if (tp->t_flags&HUPCL) {
+		DMADDR->dmcsr = dev.d_minor;
+		if (!dial[line]) {
+			DMADDR->dmlstat = TURNOFF;
+		}
+		DMADDR->dmcsr = IENABLE|SCENABL;
+	}
+}
+
+/*
+ * DM11 interrupt.
+ * Mainly, deal with carrier transitions.
+ */
+dmint()
+{
+	register struct tty *tp;
+	register int line,state;
+
+	if (DMADDR->dmcsr&DONE) {
+		line = DMADDR->dmcsr&017;
+		tp = &dh11[line];
+		if (tp < &dh11[ndh11]) {
+			state = DMADDR->dmlstat;
+			if (dial[line]) {
+			tp =+ 16;
+				if (DMADDR->dmcsr & SECINT) {
+					tp =- 16;
+					if (state & SECRCV) {
+						state = CARRIER;
+					} else {
+						state = 0;
+					}
+				}
+			}
+			wakeup(tp);
+			if (!(state&CARRIER)) {
+				if ((tp->t_state&WOPEN)==0) {
+					signal(tp->t_pgrp, SIGHUP);
+					if (!dial[line])
+						DMADDR->dmlstat = 0;
+					flushtty(tp);
+				}
+				tp->t_state =& ~CARR_ON;
+			} else {
+				tp->t_state =| CARR_ON;
+				wakeup(&tp->t_rawq);
+			}
+		}
+		DMADDR->dmcsr = IENABLE|SCENABL;
+	}
+}

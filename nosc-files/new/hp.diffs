@@ -1,0 +1,22 @@
+97c97
+< hpopen()
+---
+> hpopen(dev)
+100,101c100
+< 	if(!hp_openf){
+< 		hp_openf++;
+---
+> 	if(!hp_openf)
+102a102,104
+> 	if(! ( (hp_openf>>(dev.d_minor>>3))&1) ) {
+> 		hp_openf =| 1<<(dev.d_minor>>3);
+> 		HPADDR->hpcs2 = dev.d_minor>>3;
+171c173,174
+< 		deverror(bp, HPADDR->hpcs2, 0);
+---
+> 		deverror(bp, HPADDR->hpcs2, HPADDR->hper1);
+> 		deverror(bp,HPADDR->hper2);
+173c176
+< 			HPADDR->hpcs2 = CLR;
+---
+> 			HPADDR->hpcs2 =| CLR;

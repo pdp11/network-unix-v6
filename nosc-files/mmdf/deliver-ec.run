@@ -1,0 +1,9 @@
+rm mailer.h
+ln mailer-ec.h mailer.h
+load -n deliver mailsubs tailor-ec \
+	mailib.a \
+	nlibff.a \
+    | tee errlst
+mv a.out deliver-ec
+rm mailer.h
+ln mailer-wc.h mailer.h

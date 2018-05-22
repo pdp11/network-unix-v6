@@ -1,0 +1,1 @@
+cc -n send.o subs.a strings-ec.a libg.a libh.a mailib.a mailib.a 

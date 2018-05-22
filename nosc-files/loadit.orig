@@ -1,0 +1,32 @@
+set A = wk
+if $1x = x goto default
+set A = $1
+: default
+echo loading new $A system
+date
+if { /usr/sys/conf/isconf $A/configuration split } goto splitsys
+ld -x	$A/l.o   $A/c.o   $A/lib
+if ! -r a.out exit
+goto continue
+: splitsys
+echo spliting system
+ld -x -r -d	$A/l.o	$A/c.o	$A/lib
+if ! -r a.out exit
+nm -ug a.out
+/usr/sys/conf/sysfix a.out a.out.tmp
+rm -f a.out
+set B = .tmp
+: continue
+echo old:
+size /unix.*
+if -r $A/unix$3 size $A/unix$3
+if -r $A/unix$3 rm -f $A/unix$3
+mv a.out$B $A/unix$3
+chmod 444 $A/unix$3
+echo new:
+ls -l $A/unix$3
+size $A/unix$3
+if $2x = x exit
+if -r /unix.$2 su rm -f /unix.$2
+su cp $A/unix$3 /unix.$2
+echo saved as /unix.$2

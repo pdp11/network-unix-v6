@@ -1,0 +1,453 @@
+#
+
+/*
+ *	DH-11 driver
+ *	This driver calls on the DHDM driver.
+ *	If the DH has no DM11-BB, then the latter will
+ *	be fake. To insure loading of the correct DM code,
+ *	lib2 should have dhdm.o, dh.o and dhfdm.o in that order.
+*	5/76: modified to use "line doubler"
+*	i.e. bit 8 selects a terminal thus doubling the
+*	effective number of (7-bit) lines from 16 to 32.
+ */
+
+#include "/usr/sys/h/param.h"
+#include "/usr/sys/h/conf.h"
+#include "/usr/sys/h/user.h"
+#include "/usr/sys/h/tty1.h"
+
+#define	DHADDR	0160020
+#define	NDH11	16	/* number of lines */
+#define NDBL	16	/* number of doubled lines */
+#define	DHNCH	16	/* max number of DMA chars */
+
+struct	tty dh11[NDH11+NDBL];
+
+
+/*
+ * ones in dbl signify doubled lines
+ * ones in dial signify doubled dialin lines
+ */
+char dbl[NDH11] {0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0};
+char dial[NDH11]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+/*
+ * Place from which to do DMA on output
+ */
+char	dh_clist[NDH11][DHNCH];
+
+/*
+ * Used to communicate the number of lines to the DM
+ */
+int	ndh11	NDH11;
+
+/*
+ * Hardware control bits
+ */
+#define	BITS6	01
+#define	BITS7	02
+#define	BITS8	03
+#define	TWOSB	04
+#define	PENABLE	020
+/* DEC manuals incorrectly say this bit causes generation of even parity. */
+#define	OPAR	040
+#define	HDUPLX	040000
+
+#define	IENABLE	030100
+#define	PERROR	010000
+#define	FRERROR	020000
+#define	XINT	0100000
+#define	SSPEED	7	/* standard speed: 300 baud */
+#define S96	13	/* 9600 baud */
+
+/*
+ * Software copy of last dhbar
+ */
+int	dhsar;
+
+struct dhregs {
+	int dhcsr;
+	int dhnxch;
+	int dhlpr;
+	int dhcar;
+	int dhbcr;
+	int dhbar;
+	int dhbreak;
+	int dhsilo;
+};
+
+/*
+ * Open a DH11 line.
+ */
+dhopen(dev, flag)
+{
+	register struct tty *tp;
+	extern dhstart();
+
+	if (dev.d_minor >= NDH11+NDBL) {
+		u.u_error = ENXIO;
+		return;
+	}
+	tp = &dh11[dev.d_minor];
+	tp->t_addr = dhstart;
+	tp->t_state =| WOPEN|SSTART;
+	DHADDR->dhcsr =| IENABLE;
+	if ((tp->t_state&ISOPEN) == 0) {
+		tp->t_erase = CERASE;
+		tp->t_kill = CKILL;
+		tp->t_speeds = SSPEED | (SSPEED << 8);
+		tp->t_flags = ODDP|EVENP|ECHO;
+		dhparam(dev);
+	}
+	dmopen(dev);
+	ttyopen(dev, tp);
+}
+
+/*
+ * Close a DH11 line.
+ */
+dhclose(dev)
+{
+	register struct tty *tp;
+
+	tp = &dh11[dev.d_minor];
+	dmclose(dev);
+	tp->t_state =& (CARR_ON|SSTART);
+	wflushtty(tp);
+}
+
+/*
+ * Read from a DH11 line.
+ */
+dhread(dev)
+{
+	ttread(&dh11[dev.d_minor]);
+}
+
+/*
+ * write on a DH11 line
+ */
+dhwrite(dev)
+{
+	ttwrite(&dh11[dev.d_minor]);
+}
+
+/*
+ * DH11 receiver interrupt.
+ */
+dhrint()
+{
+	register struct tty *tp;
+	register int c;
+	register int chan;
+
+	while ((c = DHADDR->dhnxch) < 0) {	/* char. present */
+		chan = (c>>8)&017;
+		if (dbl[chan] && (c & 0200)) chan =+ 16;
+		tp = &dh11[chan];
+		if (tp >= &dh11[NDH11+NDBL])
+			continue;
+		/*
+		 * It was necessary to pervert break processing
+		 * to handle the ATTN key on the ibm 2741.
+		 * This is because pressing the ATTN key will
+		 * cause a break if the 2741 keyboard is locked.
+		 * Otherwise a CRC will be sent (arrgh).
+		 * Therefore all breaks at 134.5 baud are passed
+		 * thru as 0177's and ttyinput interprets them.
+		 */
+		if (c&FRERROR) {		/* break */
+			if (tp->t_flags&RAW
+#ifdef	IBM
+			&& (tp->t_speeds&017)!=IBM
+#endif	IBM
+			)
+				c = 0;		/* null (for getty) */
+			else
+				c = 0177;	/* DEL (intr) */
+		}
+		if((tp->t_state&ISOPEN)==0 || (c&PERROR)) {
+			wakeup(tp);
+			continue;
+		}
+		/*
+		 * Some ibm terminals may send synchronous idle codes.
+		 * It is better to throw them away here rather than to
+		 * let them get through ttyinput.
+		 */
+#ifdef	IBM
+		if ((tp->t_speeds&017)==IBM && (c== 075)) continue;
+#endif	IBM
+		ttyinput(c, tp);
+	}
+}
+
+/*
+ * stty/gtty for DH11
+ */
+dhsgtty(dev, av)
+int *av;
+{
+	register struct tty *tp;
+	register r;
+
+	tp = &dh11[dev.d_minor];
+	if (ttystty(tp, av))
+		return;
+	dhparam(dev);
+}
+
+/*
+ * Set parameters from open or stty into the DH hardware
+ * registers.
+ */
+dhparam(dev)
+{
+	register struct tty *tp;
+	register int lpr;
+
+	tp = &dh11[dev.d_minor];
+	spl5();
+	if (dev.d_minor >= NDH11) return;
+	DHADDR->dhcsr.lobyte = dev.d_minor | IENABLE;
+	/*
+	 * Hang up line?
+	 */
+	if (tp->t_speeds.lobyte==0) {
+		tp->t_flags =| HUPCL;
+		dmclose(dev);
+		return;
+	}
+	lpr = ((tp->t_speeds.hibyte & 017)<<10) |
+		((tp->t_speeds.lobyte & 017)<<6);
+	if ((tp->t_speeds.lobyte&017) == 4)
+		lpr =| BITS6|OPAR|PENABLE; else
+		if (tp->t_flags&EVENP)
+			if (tp->t_flags&ODDP)
+				lpr =| BITS8; else
+				lpr =| BITS7|PENABLE; else
+			lpr =| BITS7|OPAR|PENABLE;
+	if (tp->t_speeds.lobyte == 3)	/* 110 baud */
+		lpr =| TWOSB;
+	DHADDR->dhlpr = lpr;
+	spl0();
+}
+
+/*
+ * DH11 transmitter interrupt.
+ * Restart each line which used to be active but has
+ * terminated transmission since the last interrupt.
+ */
+dhxint()
+{
+	register struct tty *tp;
+	register ttybit, bar;
+
+	bar = dhsar & ~DHADDR->dhbar;
+	DHADDR->dhcsr =& ~XINT;
+	ttybit = 1;
+	for (tp = dh11; bar; tp++) {
+		if(bar&ttybit) {
+			dhsar =& ~ttybit;
+			bar =& ~ttybit;
+			tp->t_state =& ~BUSY;
+			dhstart(tp);
+		}
+		ttybit =<< 1;
+	}
+}
+
+/*
+ * Start (restart) transmission on the given DH11 line.
+ */
+dhstart(atp)
+struct tty *atp;
+{
+	extern ttrstrt();
+	register c, nch;
+	register struct tty *tp;
+	struct tty *tp1,*tp2;
+	int sps, dev;
+	char *cp;
+	int	dhnch;
+
+	sps = PS->integ;
+	spl5();
+	tp = atp;
+	dev = tp-dh11;
+	/*
+	 * Detect doubled lines and set atp and dev
+	 * to the real dh line.
+	 */
+	if (dev >= NDH11) {
+		atp =- 16; dev =- 16;
+	}
+	/*
+	 * clear break register after
+	 * timing out a space signal
+	 */
+	if (tp->t_state&BREAK && !(tp->t_state&TIMEOUT)) {
+	   nch=1; nch=<< dev;
+	   DHADDR->dhbreak =& ~nch;
+	   tp->t_state =& ~BREAK;
+	}
+	/*
+	 * Arbitrate doubled lines:
+	 */
+	if (dbl[dev]) {
+		if (atp->t_state & BUSY) goto out;
+		tp2 = delay(atp+16);
+		tp1 = delay(atp);
+		if (!tp1 && !tp2) goto out;
+		nch = 0;
+		cp = dh_clist[dev];
+		while (nch > -DHNCH) {
+			if (tp1) {
+				c = getc(&tp1->t_outq);
+				if (c>=0200) {
+					tp1->t_char = c;
+					tp1 = 0;
+				} else {
+					*cp++ = c;
+					nch--;
+				}
+				if (tp1->t_outq.c_cc == 0) tp1 = 0;
+			}
+			if (tp2) {
+				c = getc(&tp2->t_outq);
+				if (c>=0200) {
+					tp2->t_char = c;
+					tp2 = 0;
+				} else {
+					*cp++ = c | 0200;
+					nch--;
+				}
+				if (tp2->t_outq.c_cc == 0) tp2 = 0;
+			}
+			if (!tp1 && !tp2) {
+				break;
+			}
+		}
+		trywake(atp+16,nch);
+		trywake(atp,nch);
+		goto startio;
+	}
+	/*
+	 * If it's currently active, or delaying,
+	 * no need to do anything.
+	 */
+	if (tp->t_state&(TIMEOUT|BUSY))
+		goto out;
+	/*
+	 * t_char is a delay indicator which may have been
+	 * left over from the last start.
+	 * Arrange for the delay.
+	 * a delay > 60 will be interpreted as a request for
+	 * a break signal of (delay-60) ticks.
+	 */
+	if (c = tp->t_char) {
+		c =& 0377;
+		tp->t_char = 0;
+ibmdelay:
+		nch = c-0200;
+		if (nch>60) {
+			nch=- 60;
+			c=1; c=<< dev;
+			DHADDR->dhbreak =| c;
+			tp->t_state =| BREAK;
+			c = nch-6;
+		   }
+		timeout(ttrstrt, tp, (c&0177)+6);
+		tp->t_state =| TIMEOUT;
+		goto out;
+	}
+copy:
+	cp = dh_clist[dev.d_minor];
+	nch = 0;
+	/*
+	 * Copy DHNCH characters, or up to a delay indicator,
+	 * to the DMA area.
+	 */
+	dhnch = -DHNCH;
+	while (nch > dhnch && (c = getc(&tp->t_outq))>=0) {
+		if (c >= 0200) {
+		   if (!(tp->t_speeds&BINARY)
+#ifdef	IBM
+		   || (tp->t_speeds&017)==IBM
+#endif	IBM
+		   ) {
+			tp->t_char = c;
+			break;
+		   }
+		}
+		*cp++ = c;
+		nch--;
+	}
+	/*
+	 * If the writer was sleeping on output overflow,
+	 * wake him when low tide is reached.
+	 */
+	if (tp->t_outq.c_cc<=TTLOWAT && tp->t_state&ASLEEP) {
+		tp->t_state =& ~ASLEEP;
+		wakeup(&tp->t_outq);
+	}
+	/*
+	 * If any characters were set up, start transmission;
+	 * otherwise, check for possible delay.
+	 */
+startio:
+	if (nch) {
+		DHADDR->dhcsr.lobyte = dev.d_minor | IENABLE;
+		DHADDR->dhcar = cp+nch;
+		DHADDR->dhbcr = nch;
+		c = 1<<dev.d_minor;
+		DHADDR->dhbar =| c;
+		dhsar =| c;
+		atp->t_state =| BUSY;
+		goto out;
+	} else if (c = tp->t_char) {
+		c =& 0377;
+		tp->t_char = 0;
+		if (c >= 0200+60)
+			goto ibmdelay;
+		timeout(ttrstrt, tp, (c&0177)+6);
+		tp->t_state =| TIMEOUT;
+		goto out;
+	}
+	ttstop(tp);
+    out:
+	PS->integ = sps;
+}
+delay(atp)
+struct tty *atp;
+{
+register struct tty *tp;
+register int c;
+extern ttrstrt();
+	tp = atp;
+	if (c = tp->t_char) {
+		tp->t_char = 0;
+		timeout(ttrstrt, tp, (c&0177)+6);
+		tp->t_state =| TIMEOUT;
+		return(0);
+	}
+	if (tp->t_state & TIMEOUT) {
+		return(0);
+	}
+	if (tp->t_outq.c_cc) {
+		return(tp);
+	}
+	return(0);
+}
+trywake(atp,nch)
+{
+register struct tty *tp;
+	tp = atp;
+	if (tp->t_outq.c_cc<=TTLOWAT && tp->t_state&ASLEEP) {
+		tp->t_state =& ~ASLEEP;
+		wakeup(&tp->t_outq);
+		return;
+	}
+	if (tp->t_char && nch==0) {
+		delay(tp);
+	}
+}

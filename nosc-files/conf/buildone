@@ -1,0 +1,6 @@
+as data.s l.s
+ld -x -r -d a.out m45.o c.o ../lib1 ../lib2 ../lib3
+nm -ug
+sysfix a.out x
+echo unix in x, syms in usyms
+syms x > usyms

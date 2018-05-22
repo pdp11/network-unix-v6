@@ -1,0 +1,7 @@
+if -r send rm send
+load -n send subs.a strings.a \
+	libg.a libh.a \
+	mailib.a \
+	mailib.a \
+	| tee errlst
+if -r a.out mv a.out send

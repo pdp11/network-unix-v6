@@ -1,0 +1,5 @@
+if -r purge rm purge
+load -n purge subs.a strings.a wait -O libg.a libh.a
+if -r a.out mv a.out purge
+:					fini
+

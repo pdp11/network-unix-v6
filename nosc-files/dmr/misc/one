@@ -1,0 +1,130 @@
+ttyinput(ac, atp)
+struct tty *atp;
+{
+	register int t_flags, c;
+	register struct tty *tp;
+
+	tp = atp;
+	c = ac & 0177;
+if (tp->t_speeds&TRACE)
+printf("   inp %o\n",c);
+	/*
+	 * special treatment for ibm 2741
+	 */
+	if ((tp->t_speeds&017) == IBM) {
+		c =& 077;
+		/*
+		 * record upper/lower case changes
+		 */
+		if (c==LC) {
+			tp->ibm =& ~0200;
+			tp->ibm =| 0100;
+			return;
+		}
+		if (c==UC) {
+			tp->ibm =& ~0100;
+			tp->ibm =| 0200;
+			return;
+		}
+		/*
+		 * CRD char is not unique.
+		 * treat as a CRD only when changing state
+		 */
+		if (c==CRD) {
+			printf(" crd ");
+			if (tp->ibm & CHANGE) {
+				printf("ini\n");
+				tp->ibm =& ~  (CHANGE|LOCK);
+				tp->ibm =| ULOCK;
+				wakeup(&tp->ibm);
+				return;
+			}
+			if (tp->ibm&ESC) {
+				tp->ibm=0;
+				return;
+			}
+			printf("\n");
+		}
+		/*
+		 * CRC char is unique
+		 * indicates end of terminal msg and
+		 * transition to locked keyboard
+		 */
+		if (c==CRC) {
+printf("crc");
+			if(tp->ibm&WANT) {
+printf(" w\n");
+				tp->ibm = WANT + ULOCK;
+				wakeup(&tp->ibm);
+				return;
+			}
+			if(tp->ibm&CHANGE) {
+				printf(" urk ");
+			}
+			tp->ibm=| CHANGE;
+printf(" ch\n");
+			putc(CRC,&tp->t_outq);
+			putc(0214,&tp->t_outq);
+			ttstart(tp);
+			return;
+		}
+		/*
+		 * translate 6-bit chars to ascii
+		 */
+		if ((tp->ibm&CASE)&0100)
+			c = lc[c];
+		else	c = uc[c];
+/*
+		if (c==0177) {
+			tp->ibm = ESC;
+			flushtty(tp);
+			putc(CRC,&tp->t_outq);
+			ttstart(tp);
+			return;
+		}
+		t_flags = tp->ibm;
+		if (t_flags & ESC) {
+printf("esc %o\n",c);
+			if (c==IBMKILL)
+				c=CKILL;
+			if (c==IBMQUIT)
+				c=CQUIT;
+			if (c==IBMINTR)
+				c=CINTR;
+			tp->ibm =& ~ESC;
+			wakeup(&tp->t_outq);
+		}
+*/
+	}
+	t_flags = tp->t_flags;
+	if(( c =& 0177 ) == '\r' && t_flags&CRMOD )
+		c = '\n';
+	if ((t_flags&RAW)==0 && (c==CQUIT || c==CINTR)) {
+		signal(tp->t_pgrp, c==CINTR? SIGINT:SIGQIT);
+		flushtty( tp );
+		return;
+	}
+	if( tp->t_rawq.c_cc >= TTYHOG )
+	{
+		flushtty(tp);
+		return;
+	}
+	if (t_flags&LCASE && c>='A' && c<='Z')
+		c =+ 'a'-'A';
+	putc(c, &tp->t_rawq);
+	if (t_flags&RAW || c=='\n' || c==004) {
+		wakeup(&tp->t_rawq);
+		if (putc(0377, &tp->t_rawq)==0)
+			tp->t_delct++;
+	}
+	if( t_flags&ECHO )
+	{
+		ttyoutput(c, tp);
+		ttstart(tp);
+	}
+	if( c == tp->t_kill && (t_flags&RAW) == 0 )
+	{
+		ttyoutput( '\n',tp );
+		ttstart( tp );
+	}
+}

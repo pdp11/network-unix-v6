@@ -1,0 +1,15 @@
+echo making library
+if -r lib rm -f lib
+ar rv lib	\
+1main.o		kr_dcode.o	ir_proc.o	hr_proc.o	\
+assign.o	files.o		hstat.o		kwrite.o	\
+send_pro.o	skt_oper.o	skt_util.o	skt_off.o	\
+so_unm.o	logstat.o	util.o		swab.o		| mc
+if ! -r lib exit
+chmod 644 lib
+rm -f	\
+1main.o		kr_dcode.o	ir_proc.o	hr_proc.o	\
+assign.o	files.o		hstat.o		kwrite.o	\
+send_pro.o	skt_oper.o	skt_util.o	skt_off.o	\
+so_unm.o	logstat.o	util.o		swab.o
+if $1x != x sh $1 $2

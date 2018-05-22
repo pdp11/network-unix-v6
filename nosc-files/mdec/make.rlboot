@@ -1,0 +1,4 @@
+as fsboot.s tty.s rl.s
+strip a.out
+mv a.out rlboot
+ls -l rlboot

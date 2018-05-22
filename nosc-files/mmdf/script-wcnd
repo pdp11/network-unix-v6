@@ -1,0 +1,11 @@
+u "/m/mmdf/remsnd-ec\r"
+r ": "
+t "xxx\r"
+r ": "
+t "yyy\r"
+r ": "
+t "sri-tsc\r"
+r "% "
+t "stty -echo\r"
+r "% "
+g

@@ -1,0 +1,8 @@
+cc -L.:/usr/sys/ncpd:/usr/sys/h:/usr/include -O -c \
+1main.c		kr_dcode.c	ir_proc.c	hr_proc.c	\
+assign.c	files.c		hstat.c		kwrite.c	\
+send_pro.c	skt_oper.c	skt_util.c	skt_off.o	\
+so_unm.c	logstat.c	util.c		swab.o
+echo skt_off.s:;	as skt_off.s;	mv a.out skt_off.o
+echo swab.s:;		as swab.s;	mv a.out swab.o
+sh archive linkit $1

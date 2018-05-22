@@ -1,0 +1,127 @@
+
+
+
+File x
+Non-sharable
+  Text: 34426   Data: 1860    Bss: 14908    (decimal bytes)
+  Text: 103172  Data: 3504    Bss: 35074    (octal bytes)
+
+Undefined Global Symbols...
+   _copyout 0       _copyin 0     
+Absolute Global Symbols...
+         _u 140000
+Text Global Symbols...
+    sexdisp 2      sexcount 320        trap 402       bcall 462   
+       call 526    _display 640      _savfp 640     _incupc 642   
+      _getc 750       _putc 1140   _m_cinit 1336    _backup 1446  
+   _fuibyte 2374    _fubyte 2374   _suibyte 2426    _subyte 2426  
+   _fuiword 2500    _fuword 2500   _suiword 2544    _suword 2544  
+    _fbword 2644    _fbbyte 2712    _sbword 2764    _sbbyte 3042  
+    _fkbyte 3120       _utb 3132       _btu 3160       _ktb 3226  
+       _btk 3240    _clrbuf 3340      _idle 3410      _savu 3432  
+     _aretu 3460      _retu 3474      _spl0 3534      _spl1 3544  
+      _spl5 3562      _spl4 3562      _spl7 3600      _spl6 3600  
+   _copyseg 3610   _clearse 3744       dump 4034      start 4136  
+      _swab 4326     _dpadd 4336     _dpsub 4354     _dpcmp 4372  
+      _ldiv 4460      _lrem 4474    _lshift 4512        csv 4532  
+       cret 4546      _main 4564     _sureg 5500   _estabur 5660  
+      _nseg 6522     _iinit 6546     _alloc 6756      _free 7334  
+   _badbloc 7646    _ialloc 7734     _ifree 10474    _getfs 10564 
+    _update 10712     _iget 11174     _iput 11662   _iupdat 12010 
+    _itrunc 12364  _maknode 12776     _wdir 13104   _printf 13210 
+    _printn 13374  _putchar 13472    _panic 13666    _prdev 13730 
+   _deverro 13774    _readi 14056   _writei 14546      _max 15246 
+       _min 15300   _iomove 15332    _sleep 15632   _wakeup 16024 
+    _setrun 16110   _setpri 16206    _sched 16310    _swtch 17222 
+   _newproc 17510   _expand 20150     _bmap 20450    _passc 21524 
+     _cpass 21644    _nodev 21756  _nulldev 21774    _xswap 22004 
+     _xfree 22216   _xalloc 22346   _xccdec 23032   _salloc 23106 
+      _trap 23166    _trap1 24154    _nosys 24212  _nullsys 24230 
+    _signal 24240  _psignal 24326    _issig 24432     _stop 24522 
+      _psig 24644     _core 25140     _grow 25444   _ptrace 25724 
+   _procxmt 26222    _clock 26720  _timeout 27672     _getf 30060 
+    _closef 30132   _closei 30264    _openi 30420   _access 30564 
+     _owner 30766    _suser 31054  _ufalloc 31110   _falloc 31166 
+    _malloc 31304    _mfree 31406    _namei 31636    _schar 33000 
+     _uchar 33024     _pipe 33070    _readp 33252   _writep 33460 
+     _plock 33750    _prele 34020     _exec 34060    _rexit 35740 
+      _exit 35770     _wait 36332     _fork 37262   _sbreak 37436 
+      _read 37774    _write 40014     _rdwr 40034     _open 40320 
+     _creat 40372    _open1 40500    _close 41046     _seek 41112 
+      _link 41422    _mknod 41654    _sslep 41764  _saccess 42046 
+   _net_res 42234    _fstat 42354     _stat 42440    _stat1 42522 
+       _dup 42762   _smount 43032  _sumount 43422  _getmdev 43624 
+   _getswit 43734    _gtime 43752    _stime 44002   _setuid 44042 
+    _getuid 44114   _setgid 44144   _getgid 44206   _getpid 44236 
+      _sync 44260     _nice 44274   _unlink 44350    _chdir 44540 
+     _chmod 44666    _chown 44756     _ssig 45034     _kill 45146 
+     _times 45326   _profil 45442    _alarm 45520    _pause 45552 
+    _badint 45576   _qenter 45624  _qdelink 45710      _pee 45772 
+       _vee 46046  _cqenter 46106  _cqdelin 46156    _bread 46224 
+    _breada 46326   _bwrite 46610  _bdwrite 46720  _bawrite 47006 
+    _brelse 47034   _incore 47174   _getblk 47266   _iowait 47662 
+   _notavai 47740   _iodone 50020    _binit 50104  _mapallo 50354 
+   _mapfree 50546     _swap 50610   _bflush 51070   _physio 51200 
+   _geterro 52012   _dhopen 52052  _dhclose 52234   _dhread 52304 
+   _dhwrite 52336   _dhrint 52370  _dhsgtty 52526  _dhparam 52602 
+    _dhxint 53022  _dhstart 53132   _dmopen 53526  _dmclose 53560 
+    _klopen 53570  _klclose 54004   _klread 54042  _klwrite 54074 
+    _klxint 54126   _klrint 54210  _klsgtty 54274   _mmread 54334 
+   _mmwrite 54562   _rlopen 55042  _rlstrat 55232   _rltran 55442 
+   _rlstart 55554   _rlintr 56074   _rlread 56552  _rlwrite 56612 
+    _syopen 56650   _syread 56724  _sywrite 56756  _sysgtty 57010 
+   _ttyopen 57046     _gtty 57136     _stty 57246    _sgtty 57336 
+   _wflusht 57442    _cinit 57532  _flushtt 57600    _canon 57722 
+    _ttchar 60164  _ttyinpu 60370  _ttyoutp 60716  _ttrstrt 61640 
+   _ttstart 61670   _ttread 62044  _ttwrite 62230  _ttystty 62364 
+     _backc 62500  _imp_ini 62724  _imp_out 63022  _impread 63126 
+   _i11a_oi 63210  _i11a_ii 63304  _clk_HMR 63412  _set_HMR 63422 
+   _spl_imp 63500  _imp_res 63514  _netread 63602  _netwrit 64070 
+   _anyallo 64366  _netslee 64454  _sendall 64600  _sendins 65150 
+   _netopen 65302  _netclos 66102  _net_frl 66304   _daecls 66344 
+    _daedes 66424  _netstat 66576  _entcont 66762  _inconta 67046 
+   _rmconta 67200  _infilet 67222  _appendb 67264  _bcopyin 67344 
+   _bcopyou 67444  _bytesou 67550   _catmsg 70034  _emerbuf 70226 
+     _freeb 70242  _freebuf 70400   _freekb 70510  _freemsg 70760 
+    _getbuf 71012    _getkb 71164  _ifreebu 71410  _linkbuf 71456 
+   _vectoms 71534  _sndnetb 72016  _ncp_bfr 72470  _ncpopen 72606 
+   _ncpclos 72670  _ncpread 72776  _ncpwrit 73262   _to_ncp 73554 
+   _log_to_ 74204  _wf_send 74346  _wf_rese 74412  _wf_clea 74562 
+    _iclean 74612  _wf_read 75004  _wf_inc_ 75114   _wf_mod 75254 
+   _wf_setu 75370  _wf_frls 75724  _wf_stim 75746  _wf_upda 76030 
+    _daetim 76064  _set_bit 76110  _reset_b 76160   _bit_on 76230 
+   _impopen 76304  _imp_inp 76620       _hh 77226       _ih 77770 
+   _siguser 100150 _prt_dbg 100336 _flushim 100756  _ihbget 101020
+       _hh1 101106 _allocat 101520 _rmovepa 101726 _imphost 102136
+   _imp_dwn 102220 _impstra 102402 _prt_odb 102474 _imp_odo 102730
+      _itol 103160
+Data Global Symbols...
+       _ka6 103172 _cputype 103174  _unixid 103176      _id 103200
+    _bdevsw 103300  _cdevsw 103322 _rootdev 103420 _swapdev 103422
+     _swplo 103424   _nswap 103426   _icode 103430 _msgbufp 103640
+    _regloc 104016  _sysent 104216 _Free_pr 104710 _Run_pro 104716
+   _Swap_re 104724  _partab 104750  _maptab 105150 _ncpopta 105526
+   _impdebu 105734  _hhsize 105736 _prt_ops 105770 _prt_typ 106026
+   _impodeb 106066   _edata 106676
+Bss Global Symbols...
+    _runrun 106676 _cfreeli 106700  _clistp 106702      _cu 106704
+     _rltab 106706 _coremap 106720 _swapmap 107230 _rootdir 107704
+    _execnt 107706   _lbolt 107710    _time 107712 _callout 107716
+      _mpid 110106   _runin 110110  _runout 110112  _curpri 110114
+    _maxmem 110116     _lks 110120 _updlock 110122 _rablock 110124
+    _msgbuf 110126 _intrvec 110164    _proc 110166 _MAXPROC 114726
+      _text 114730   _inode 115240   _mount 130200 _nblkdev 133420
+   _nchrdev 133422     _buf 133424 _bfreeli 135054 _panicst 135106
+      _file 135110     _ipc 137670 _maxcall 137700   _swbuf 137702
+     _tmtab 137734   _httab 137746 _maplock 137760    _dh11 137762
+   _dh_clis 140562   _dhsar 140722    _kl11 140724    _rl01 140764
+    _rrlbuf 141004 _ncpopns 141036   _net_b 141040 _HMR_int 141206
+   _impi_so 141210 _impi_ms 141212 _impi_ad 141214 _impi_ml 141216
+   _impi_fl 141220 _impi_b_ 141222 _impi_re 141224 _impi_d_ 141226
+   _impi_l_ 141230 _impi_cs 141232 _impo_cs 141234 _impi_wc 141236
+   _imp_sta 141240     _imp 141256    _oimp 141270 _impotab 141302
+   _impobuf 141314 _r_conta 141344 _w_conta 142044 _file_ta 142544
+   _host_ma 142610  _canonb 142650    _tout 143250 _lastpro 143254
+   _ncptimo 143256   _ncprs 143260 _ncpdlos 143272   _ncprq 143274
+    _ncpirq 143276  _badvec 143300  nofault 143304      ssr 143306
+    badtrap 143314     _end 143772

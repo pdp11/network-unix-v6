@@ -1,0 +1,59 @@
+58a59
+> 	Slightly fixed for split I/D kernel by KLH at SRI.
+60,63c61,64
+< #include "../h/param.h"	/* parameters used in later files */
+< #include "../h/user.h"
+< #include "../h/text.h"
+< #include "../h/proc.h"	/* has big proc table; only need small one */
+---
+> #include "param.h"	/* parameters used in later files */
+> #include "user.h"
+> #include "text.h"
+> #include "proc.h"	/* has big proc table; only need small one */
+65c66
+< #include "../h/inode.h"	/* has big inode table; only need small one */
+---
+> #include "inode.h"	/* has big inode table; only need small one */
+84c85,88
+< 	char *dataval;
+---
+> 	char *datsiz;	/* size of initialized data */
+> 	char *bsssiz;	/* size of bss data area */
+> 	char *dataval;	/* total of datsiz + bsssiz */
+> 
+136c140,142
+< 	dataval = buf[2] + buf[3];
+---
+> 	datsiz = buf[2];
+> 	bsssiz = buf[3];
+> 	dataval = datsiz + bsssiz;
+166c172
+< 		printf("%6d%6d%6d ", proc[0].p_pid, proc[0].p_ppid, proc[0].p_pgrp);
+---
+> 		printf("%6d%6d%6d ", proc[0].p_pid, proc[0].p_ppid, 0/*proc[0].p_pgrp*/);
+198,199c204,205
+< 	seek(sym,16+040,0);	/* beginning of core image */
+< 	seek(core,040,0);
+---
+> 
+> 	/* Seek to beginning of core image in both files */
+201,202c207,211
+< 		seek(sym, 16 + dataval + 040, 0);
+< 		seek(core, dataval + 040, 0);
+---
+> 		printf("\nSystem is split\n");
+> 		seek(sym, 16 + datsiz, 0);	/* Assumes bin was sysfixed */
+> 			/* Text gets put into 1st page after data seg */
+> 		seek(core, ((dataval+077)>>6)<<6, 0);
+> 		curloc=0;
+203a213,218
+> 	else {
+> 		printf("\nSystem not split\n");
+> 		seek(sym,16+040,0);	/* beginning of core image */
+> 		seek(core,040,0);
+> 		curloc=040;
+> 	}
+205c220
+< 	for(curloc=040; curloc<maxloc; curloc=+16){
+---
+> 	for(; curloc<maxloc; curloc=+16){

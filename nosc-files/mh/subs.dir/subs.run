@@ -1,0 +1,20 @@
+ar rv /m/mh/subs.a	m_maildir.o	\
+		m_setcur.o	\
+		makedir.o	\
+		m_gmprot.o	\
+		m_getfolder.o	\
+		m_convert.o	\
+		m_find.o	\
+		m_replace.o     \
+		m_update.o      \
+		m_getdefs.o	\
+		m_getfld.o	\
+		m_gmsg.o	\
+		m_name.o	\
+		add.o atoi.o atooi.o concat.o \
+		gans.o getchar.o \
+		getcpy.o peekc.o puts.o cputc.o trimcpy.o uleq.o \
+		showfile.o      \
+		fdcompare.o cfree.o copyip.o    \
+		locv.o m_delete.o ambigsw.o help.o \
+		invo_name.o printsw.o ssequal.o smatch.o pr_array.o

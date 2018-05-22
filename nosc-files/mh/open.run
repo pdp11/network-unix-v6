@@ -1,0 +1,5 @@
+if -r open rm open
+load -n open subs.a strings.a wait -O libg.a libh.a
+if -r a.out mv a.out open
+:					fini
+

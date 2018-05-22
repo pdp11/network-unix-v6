@@ -1,0 +1,4 @@
+load -nt netsnd hostrans sndsubs mailsubs tailor \
+	mailib.a nlibff.a \
+	| tee errlst
+mv a.out netsnd

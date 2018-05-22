@@ -1,0 +1,64 @@
+31a32,34
+> #define TMopen	0001
+> #define TMeof	0002	/* last read an EOF */
+> #define TMflush	0004	/* purge all I/O to this device */
+68c71
+< 		t_openf[dminor]++;
+---
+> 		t_openf[dminor] = TMopen;
+74c77
+< tmclose(dev, flag)
+---
+> tmclose(adev, flag)
+76c79
+< 	register int dminor;
+---
+> 	register int dminor, dev;
+77a81
+> 	dev = adev;
+80,82c84,86
+< 		tcommand(dminor, WEOF);
+< 		tcommand(dminor, WEOF);
+< 		tcommand(dminor, dev&NOREW ? SREV : REW);
+---
+> 		tcommand(dev, WEOF);
+> 		tcommand(dev, WEOF);
+> 		tcommand(dev, dev&NOREW ? SREV : REW);
+85,87c89,91
+< 			tcommand(dminor, REW);
+< 		else if(t_openf[dminor] != -1)
+< 			tcommand(dminor, SFORW);
+---
+> 			tcommand(dev, REW);
+> 		else if((t_openf[dminor] & TMeof) == 0)
+> 			tcommand(dev, SFORW);
+170c174
+< 	com = ((unit=bp->b_dev.d_minor&07)<<8) | ((bp->b_xmem & 03) << 4) | DENS;
+---
+> 	com = ((bp->b_dev.d_minor&~NOREW)<<8) | ((bp->b_xmem & 03) << 4);
+185c189,190
+< 	if (t_openf[unit] < 0 || (TMADDR->tmcs & CRDY)==0) {
+---
+> 	unit = bp->b_dev.d_minor&07;
+> 	if ((t_openf[unit] & TMflush) || (TMADDR->tmcs & CRDY)==0) {
+189a195
+> 	t_openf[unit] =& ~TMeof;
+251,253c257,265
+< 		} else
+< 			if(bp != &rtmbuf && (TMADDR->tmer&EOF)==0)
+< 				t_openf[unit] = -1;
+---
+> 		} else if (TMADDR->tmer&EOF) {
+> 			t_openf[unit] =| TMeof;
+> 			if (bp != &rtmbuf)	/* flush future I/O on */
+> 				t_openf[unit] =| TMflush; /* cooked device */
+> 			bp->b_resid = bp->b_wcount << 1;
+> 			tmdone();
+> 			tmstart();
+> 			return;
+> 		}
+255,256c267
+< 			else
+< 				deverror(bp, TMADDR->tmer, 0);
+---
+> 		else	deverror(bp, TMADDR->tmer, 0);

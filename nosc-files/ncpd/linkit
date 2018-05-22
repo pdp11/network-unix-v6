@@ -1,0 +1,40 @@
+echo Normal version:
+ld -s -x /lib/crt0.o lib -lj -lc -l
+if ! -r a.out exit
+chmod 744 a.out
+mv a.out  Largedaemon
+lz -lg  Largedaemon
+size  Largedaemon
+
+echo Debugging version:
+cc -c -O 0debug.c
+if ! -r 0debug.o exit
+ld -x /lib/crt0.o 0debug.o lib -lj -lc -l
+rm -f 0debug.o
+chmod 744 a.out
+mv a.out Buggeddaemon
+lz -lg Buggeddaemon
+size Buggeddaemon
+
+if $1x != yesx goto nostore
+echo Old version:
+lz -lg /usr/net/etc/largedaemon
+size /usr/net/etc/largedaemon
+su cp Largedaemon /usr/net/etc/largedaemon
+su chmod 544 /usr/net/etc/largedaemon
+su chown daemon /usr/net/etc/largedaemon
+su chgrp system /usr/net/etc/largedaemon
+echo New largedaemon installed
+lz -lg /usr/net/etc/largedaemon
+size /usr/net/etc/largedaemon
+: nostore
+
+if $1x != bugx exit
+echo Old version:
+lz -lg /usr/net/etc/largedaemon
+size /usr/net/etc/largedaemon
+cmp Buggeddaemon /usr/net/etc/largedaemon
+su cp Buggeddaemon /usr/net/etc/largedaemon
+echo New debugging largedaemon installed
+lz -lg /usr/net/etc/largedaemon
+size /usr/net/etc/largedaemon

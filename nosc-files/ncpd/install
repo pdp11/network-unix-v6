@@ -1,0 +1,15 @@
+: loop
+cc -L.:/usr/sys/ncpd:/usr/sys/h:/usr/include -O -c $1.c
+if ! -r $1.o goto nope
+ar rv lib $1.o|mc
+rm -f $1.o
+: next
+shift
+if $1x = x exit
+if $1 != yes goto loop
+if $no = no exit
+sh linkit $2
+exit
+: nope
+set n = n
+goto next

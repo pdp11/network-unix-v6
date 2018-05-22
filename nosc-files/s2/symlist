@@ -1,0 +1,107 @@
+
+
+
+File a.out
+Non-sharable
+  Text: 7658    Data: 1610    Bss: 88       (decimal bytes)
+  Text: 16752   Data: 3112    Bss: 130      (octal bytes)
+
+Absolute Local Symbols...
+        iot 4             f 4          name 4            cc 4     
+          p 4      mappedid 4             l 4          addr 4     
+       addr 4      kerprocb 4             i 4            pp 4     
+        val 4       procnum 4           pid 4           pid 4     
+     parent 4            ac 4            o0 6          list 6     
+          s 6      contents 6       memfile 6      psprocba 6     
+    verbose 6       verbose 6            av 6            o1 10    
+    memfile 10     psnicead 10            p 12      memfile 12    
+    niceval 14      epsilon 37114       one 40200       one 40200 
+        ten 41040       ten 41040       big 56200      huge 77777 
+      space 175460  statbuf 176716    pbufr 176734     dbuf 176762
+    fakbufr 177734      buf 177740   dollar 177742    parm1 177744
+      leadz 177746    ndfnd 177750   clong1 177750    rjust 177752
+      width 177754    clong 177754    formp 177756      lng 177760
+    charcnt 177760     nbad 177760     argv 177760   ndigit 177762
+          f 177762        c 177762     argc 177762        m 177764
+   dsplbase 177764 swapfoun 177764       mf 177764  infofid 177764
+          n 177766 xlateend 177766    charp 177766  thisdif 177766
+      laddr 177766        b 177766        f 177770  usrbufr 177770
+       ttyp 177770      val 177770   minptr 177770    baddr 177770
+          n 177770
+Text Local Symbols...
+      ~main 32      ~cprint 1460   ~okprint 1620   ~procpri 2070  
+     ~prcom 3026    ~gettty 4154   ~syminit 4264    ~symbol 5004  
+      ~scan 5226      ~done 5266   ~setprio 5312      ~load 5440  
+     ~store 5552   ~prclock 5662    ~mappid 6322   ~getpsin 6402  
+    ~getdev 7016     ~setup 10036   ~maptty 10102        fl 10346 
+     savior 10434      loop 10662   charout 10702       oct 11166 
+        OCT 11172       hex 11204       HEX 11210    DECnsg 11224 
+        nsg 11234       NSG 11244       dcm 11252       DEC 11260 
+   displini 11272       flt 11426       sci 11434       SCI 11442 
+        chr 11500       byt 11516       str 11532       rem 11556 
+      prbuf 11570     prstr 11600      gnum 11760   putchar 12044 
+      float 12312       out 12564       int 12602     digit 12656 
+     ~nlist 12706    ~lseek 13466        fl 15100    badret 15154 
+    goodret 15160       gtr 16266       zer 16356       lss 16362 
+        pad 16404     digit 16414    digit1 16432       out 16444 
+     outout 16534        er 16736       er1 16742 
+Data Local Symbols...
+     jmptbl 21636   casetbl 21700      xtab 21722   process 21742 
+   adrupdat 21750        nd 22020     tenth 22044       dev 22056 
+Bss Local Symbols...
+        buf 22066    buftop 22136      sign 22136     eflag 22140 
+        buf 22142      name 22212 
+Undefined Global Symbols...
+       _end 0       _cdevsw 0       _bdevsw 0       _partab 0     
+Text Global Symbols...
+      start 0         _main 32      _cprint 1460   _okprint 1620  
+   _procpri 2070     _prcom 3026    _gettty 4154   _syminit 4264  
+    _symbol 5004      _scan 5226      _done 5266   _setprio 5312  
+      _load 5440     _store 5552   _prclock 5662    _mappid 6322  
+   _getpsin 6402    _getdev 7016     _setup 10036   _maptty 10102 
+   _putchar 10254    _flush 10332   _prints 10454   _printc 10502 
+    _printf 10520    _patoi 12104     _atoi 12124    _patof 12152 
+      _atof 12172    _nlist 12706    _lseek 13466    _chdir 13666 
+     _close 13720    _creat 13746      _dup 14004      lmul 14030 
+      almul 14106      lrem 14174      ldiv 14206     alrem 14404 
+      aldiv 14416     _open 14624   _fcreat 14662     _putw 14720 
+      _putc 15016   _fflush 15062     _read 15170     _sbrk 15232 
+       _brk 15302     _seek 15342     _stat 15406    _write 15446 
+     _abort 15510    cerror 15522       csv 15540      cret 15554 
+      _exit 15572   fltused 15610    pfloat 15610    pscien 15726 
+    _getuid 16056     _itol 16070  __cleanu 16102     _ecvt 16104 
+      _fcvt 16132      fcvt 16174      ecvt 16202     _ttyn 16576 
+       ttyn 16616 
+Data Global Symbols...
+     _coref 16754   _symref 16756  _infonam 16760     _fout 20630 
+   _atodigs 21744  _atonext 21746   _ndigit 22054 
+Bss Global Symbols...
+      savr5 22064 
+Ld File Symbols...
+     crt0.o 0          ps.o 32     1putcr.o 10254  2print.o 10434 
+      ato.o 12104   nlist.o 12706   lseek.o 13466   chdir.o 13666 
+    close.o 13720   creat.o 13746     dup.o 14004  ilongops 14030 
+     open.o 14624    putc.o 14662    read.o 15170    sbrk.o 15232 
+     seek.o 15342    stat.o 15406   write.o 15446   abort.o 15510 
+   cerror.o 15522     csv.o 15540    exit.o 15572   fltpr.o 15610 
+   getuid.o 16056    itol.o 16070  cleanup. 16102    ecvt.o 16104 
+     ttyn.o 16576 
+Special Symbols...
+          c 2        mindif 2           cp1 2            ap 2     
+          q 3             i 3        symfid 3             c 3     
+          i 3             j 3            cp 3             j 3     
+          c 3             r 4             p 4             c 4     
+          p 4       infofid 4             i 4      niceaddr 4     
+          p 4             v 4             i 4             i 4     
+         ip 4             i 4             i 4             i 4     
+          i 4     
+Common Symbols...
+     _errno 2      _swapdev 2      _nchrdev 2      _nblkdev 2     
+    _errorr 2       _maxsym 2       _symtab 2          _sym 2     
+     _psfid 2         _swap 2        _swmem 2       _headed 2     
+    _pcount 2          _mem 2         _qflg 2         _pflg 2     
+      _nflg 2         _wflg 2         _aflg 2         _xflg 2     
+      _Bflg 2         _bflg 2      _pgrpcnt 2         _cflg 2     
+      _lflg 2          _uid 2          _buf 40        _pgrp 62    
+   _pgrpinx 62         _tty 74          _nl 110         _ua 1000  
+    _psinfo 1016      _proc 1616  

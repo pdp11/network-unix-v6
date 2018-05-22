@@ -1,0 +1,157 @@
+.nr l 70
+.nr i 5
+.ll \nl
+.de pg
+.sp
+.ne 2
+.ti -\ni
+..
+.de hd
+.lt \nl
+.tl 'SND(I)'\n(mo/\n(dy/\n(yr'SND(I)'
+'sp 3
+..
+.de fo
+'sp 4
+.lt \nl
+.tl ''- % -''
+'bp
+..
+.wh 0 hd
+.wh -7 fo
+.in 5
+.pg
+NAME
+     snd - send a message
+.pg
+SYNOPSIS
+     snd
+.pg
+DESCRIPTION
+	SND is a program for sending mssages to other Unix users
+or to users of other computers on the Arpanet.
+When invoked, sndmsg will ask for two lists of
+recipients, a primary list and a secondary list.  Any person whose
+name appears on either list will receive the note; the only
+difference between the two lists is whether the person's name comes
+under the heading 'To' or 'cc'.  The format is the same for both
+lists - a series of names separated by commas.  Each name on
+the list must be one of the following:
+
+   a name listed in the alias file (see below)
+   the login-name of a unix user
+   a file name immediately followed by a colon
+   a network address of the form <name>@<site>
+     (the @ character is disabled as a line-delete while
+     the 'To' and 'cc' lists are being typed
+
+	The alias file contains entries indicating that a name used
+in snd is to be replaced by other names.  For example, the following
+entry -
+
+   skiers:jal,wahrman@RCC,/etc/skilist:
+
+would indicate that any messages which included 'skiers' in the distribution
+list would go to jal, wahrman@RCC, and everyone listed in the file
+/etc/skilist.  Each entry in the alias file must fit in a single line.
+This limitation does not hold for files, however, so an alias entry
+can point to a file (as in this example) in order to increase the number
+of people in refers to.
+
+	A file can be specified in the distribution list; this file
+should contain names of people to receive the message.  Searching
+through files and through the alias file is not recursive, so an
+entry for an alias
+name may not include another alias name (or a file which contains
+alias names), and a file may not include a file name (or an alias
+name which contains a file name).  This has some advantages: for
+example, the following entry -
+
+   bobg:bobg,Greenberg@BBN
+
+would indicate that any messages sent to the name 'bobg' would show
+up in the local mailbox for bobg and also be sent to the network
+address shown.
+
+	If snd is called by the server FTP, the alias facility
+also becomes available for incoming network mail.
+
+	Messages which include any network users
+on the distribution list who are at sites other than Rand-RCC or
+Rand-ISD will be monitored by the correspondence office.
+
+	After the 'To' and 'cc' lists
+have been entered, snd will ask for a subject.  If it is necessary
+to type more than one line of text for the subject or either of the
+recipient lists, a newline character preceeded by a backslash (the
+unix literal escape) can be used anywhere in the text.  There is,
+however, a maximum of 256 characters allowed for each of the above
+inputs.  
+
+	After the recipient lists and subject have been entered, type
+the text of the letter, ending with a ^D (keyboard end-of-file).
+Normal Unix editing is in effect.  At that point one of several
+commands can be given (only the first letter is significant):
+
+.ev 1
+.nr t 10
+.ll \nl-4
+.in \ni+\nt+4
+.de it
+.ti -\nt
+..
+.it
+queue   - will deliver copies of the message to any local users
+specified and will queue copies to network users for
+later delivery by a mailer daemon
+.it
+send    - same as queue but will try to send copies of the message
+for network users immediately, queueing them only if
+they cannot be sent (the send option is not yet implemented
+and currently is the same as the queue option)
+.it
+display - display the message as accumulated so far
+.it
+input   - continue typing the message
+.it
+re      - call the Rand editor to modify the message as accumulated
+so far
+.it
+ed      - call the Unix editor to modify the message as accumulated
+so far
+.it
+file    - inlucde a file as part of the message (will ask for the
+file name)
+.it
+justify - justify the margins of the message accumulated so far
+(if this option is used, there should be no lines having the
+tilde '~' in the first column)
+.it
+?       - give a summary of these commands
+
+.ev
+	All commands other than send and queue will return to this
+part of the program when they are done so that it is possible, say,
+to type part of the message, then (after typing ^D) use the 'file'
+command to insert a file, then use the 'input' command to type more of
+the message, then (after typing ^D again) use the 're' command to
+correct any previous mistakes, then use the 'justify' command
+to make the message look nice, then use the 'display' command to
+see what the final result looks like, and finally use the 'send'
+command to actually deliver the message
+.pg
+FILES
+     /etc/passwd            Location of user mailboxes
+     unsent.mail            Undeliverable mail left here
+     returned.mail          Undeliverable network mail returned
+			      by mailer
+     .mail                  Delivered mail left here
+     /tmp/send?????         Temporary file
+     /usr/net/hnames        Network host names
+     /usr/netmail/?????     Queued messages
+     /usr/net/aliases       List of alias names
+.pg
+DIAGNOSTICS
+     All diagnostic messages are intended to be self explanatory.
+	
+

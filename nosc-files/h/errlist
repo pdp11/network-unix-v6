@@ -1,0 +1,6 @@
+ps.c:251: Illegal conversion
+ps.c:313: p_ttyp undefined; func. gettty
+ps.c:313: Illegal structure ref
+ps.c:317: Illegal structure ref
+ps.c:320: Illegal structure ref
+ps.c:324: Illegal structure ref

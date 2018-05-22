@@ -1,0 +1,5 @@
+if -r delete rm delete
+load -n delete subs.a strings.a wait -O libg.a libh.a libg.a
+if -r a.out mv a.out delete
+:					fini
+

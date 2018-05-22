@@ -1,0 +1,20 @@
+Hi, John --
+
+Well, after a grim fight, I finally got all the files off your tape.  One
+block was unreadable; however after an unbelivable cut-and-paste job on
+the file (it was disk1, the copy of the source disk), I got something that
+would work.  I had to patch in a block of zeros, but it turned out that the
+bad block was in the middle of a recreatable binary, so I'm OK.
+
+To make sure that your tape is OK, I'll read the whole thing back in
+before I send it to you.
+
+One curious thing -- I truncated disk1 and disk2 to 4000 blocks, 'cause
+that's how big they are (disk3 is 4872, despite what the documentation
+says), and wrote it out on one of my tapes using tp.  Now, however, I
+can't read it back in!  Any ideas?  There are no tape errors; tp gets a
+core dump with a buss error.
+
+I hope you find the problem with your system and get back on soon.
+
+-- Greg

@@ -1,0 +1,5 @@
+if -r prompter rm prompter
+load -n prompter subs.a strings.a wait.o -O libg.a libh.a libg.a
+if -r a.out mv a.out prompter
+:					fini
+

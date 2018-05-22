@@ -1,0 +1,5 @@
+load -t deliver mailsubs tailor \
+	mailib.a \
+	nlibff.a \
+    | tee errlst
+mv a.out deliver

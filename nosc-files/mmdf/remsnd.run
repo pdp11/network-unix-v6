@@ -1,0 +1,8 @@
+if -r remsnd rm remsnd
+load -t -O remsnd hostrans sndsubs mailsubs tailor wait              \
+	./dialdir/dl_lib \
+	utilib.a nlibff.a                    \
+	| tee errlst
+mv a.out remsnd
+cat remsnd.txt
+

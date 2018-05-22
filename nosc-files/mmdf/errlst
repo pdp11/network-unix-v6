@@ -1,0 +1,2 @@
+cc -t -O remsnd.c hostrans.o sndsubs.o mailsubs.o tailor-ec.o wait.o 
+./dialdir/dl_lib utilib.a nlibff.a 

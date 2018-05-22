@@ -1,0 +1,23 @@
+telnet.c:75: otel_bre undefined; func. cmd_para
+telnet.c:75: (Warning only)
+telnet.c:76: tel_ao undefined; func. cmd_para
+telnet.c:76: (Warning only)
+telnet.c:77: tel_ayt undefined; func. cmd_para
+telnet.c:77: (Warning only)
+telnet.c:78: tel_ga undefined; func. cmd_para
+telnet.c:78: (Warning only)
+telnet.c:79: tel_ip undefined; func. cmd_para
+telnet.c:79: (Warning only)
+telnet.c:280: getoken redeclared
+telnet.c:606: tel_iac undefined; func. set_echo
+telnet.c:607: tel_dont undefined; func. set_echo
+telnet.c:607: tel_do undefined; func. set_echo
+telnet.c:612: otel_noe undefined; func. set_echo
+telnet.c:612: otel_ech undefined; func. set_echo
+telnet.c:691: tel_iac undefined; func. send_pro
+telnet.c:716: otel_dm undefined; func. send_syn
+telnet.c:844: map_echo redeclared
+telnet.c:906: strmove redeclared
+telnet.c:986: setmembe redeclared
+telnet.c:1078: colon redeclared
+telnet.c:1098: gethomed redeclared

@@ -1,0 +1,5 @@
+if -r show rm show
+load -n show subs.a strings.a wait -O libg.a libh.a
+if -r a.out mv a.out show
+:					fini
+

@@ -1,0 +1,2 @@
+do chown unix locsnd
+do chmod 4777 locsnd

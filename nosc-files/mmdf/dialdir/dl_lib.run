@@ -1,0 +1,16 @@
+load -c -O dlbuffo dlintr dlopen dlread dlresp dlsend dlwrite \
+    dlserr dlstart rml rml1 rmu
+
+ar rv dl_lib \
+dlbuffo.o  \
+dlintr.o  \
+dlopen.o  \
+dlread.o  \
+dlwrite.o  \
+dlresp.o  \
+dlsend.o  \
+dlserr.o  \
+dlstart.o  \
+rml.o  \
+rml1.o  \
+rmu.o

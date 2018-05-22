@@ -1,0 +1,3 @@
+if -r file rm file
+load -n file subs.a strings.a wait -O libg.a libh.a
+if -r a.out mv a.out file

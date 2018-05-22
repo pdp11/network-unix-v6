@@ -1,0 +1,9 @@
+: loop
+echo Munging $1...
+ed $1
+g/include[ 	]*"\/usr\/sys\/h/ s/\/usr\/sys\/h\///
+g/include[ 	]*"\/usr\/sys\/ncpd/ s/\/usr\/sys\/ncpd\///
+w
+q
+shift
+if $1x != x goto loop

@@ -1,0 +1,3311 @@
+<File 1>
+ h/filsys.h
+1221
+/*
+ * Definition of the unix super block.
+ * The root super block is allocated and
+ * read in iinit/alloc.c. Subsequently
+ * a super block is allocated and read
+ * with each mount (smount/sys3.c) and
+ * released with unmount (sumount/sys3.c).
+ * A disk block is ripped off for storage.
+ * See alloc.c for general alloc/free
+ * routines for free list and I list.
+ */
+struct	filsys
+{
+	int	s_isize;	/* size in blocks of I list */
+	char	*s_fsize;	/* size in blocks of entire volume */
+	int	s_nfree;	/* number of in core free blocks (0-100) */
+	int	s_free[100];	/* in core free blocks */
+	int	s_ninode;	/* number of in core I nodes (0-100) */
+	int	s_inode[100];	/* in core free I nodes */
+	char	s_flock;	/* lock during free list manipulation */
+	char	s_ilock;	/* lock during I list manipulation */
+	char	s_fmod;		/* super block modified flag */
+	char	s_ronly;	/* mounted read-only flag */
+	int	s_time[2];	/* current date of last update */
+	int	pad[50];
+/*PWB	int	pad[40];
+/*PWB	char	*s_tfree;	/* total free blocks available */
+/*PWB	char	*s_tinode;	/* total free inodes available */
+/*PWB	char	s_fname[6];	/* name of the file system */
+/*PWB	char	s_fpack[6];	/* name of the pack (pack ID) */
+};
+<File 1>
+ h/systm.h
+2328
+/*
+ * Random set of variables
+ * used by more than one
+ * routine.
+ */
+#ifdef CMAPSIZ
+int	coremap[CMAPSIZ];	/* space for core allocation */
+#endif CMAPSIZ
+#ifdef SMAPSIZ
+int	swapmap[SMAPSIZ];	/* space for swap allocation */
+#endif SMAPSIZ
+int	*rootdir;		/* pointer to inode of root directory */
+int	cputype;		/* type of cpu =40, 45, or 70 */
+int	execnt;			/* number of processes in exec */
+int	lbolt;			/* time of day in 60th not in time */
+int	time[2];		/* time in sec from 1970 */
+/*
+ * The callout structure is for
+ * a routine arranging
+ * to be called by the clock interrupt
+ * (clock.c) with a specified argument,
+ * in a specified amount of time.
+ * Used, for example, to time tab
+ * delays on teletypes.
+ */
+struct	callo
+{
+	int	c_time;		/* incremental time */
+	int	c_arg;		/* argument to routine */
+	int	(*c_func)();	/* routine */
+};
+#ifdef NCALL
+struct callo callout[NCALL];
+#endif NCALL
+/*
+ * Mount structure.
+ * One allocated on every mount.
+ * Used to find the super block.
+ */
+struct	mount
+{
+	int	m_dev;		/* device mounted */
+	int	*m_bufp;	/* pointer to superblock */
+	int	*m_inodp;	/* pointer to mounted on inode */
+#ifdef UCBUFMOD
+	int	m_isize;	/* incore copy of s_isize */
+	char	*m_fsize;	/* incore copy of s_fsize */
+	int	m_nfree;	/* incore copy of s_nfree */
+	int	m_ninode;	/* incore copy of s_ninode */
+	char	m_flock;	/* lock during free list manipulation */
+	char	m_ilock;	/* lock during I list manipulation */
+	char	m_fmod;		/* super block modified flag */
+	char	m_ronly;	/* mounted read-only flag */
+/*PWB	char	*m_tfree;	/* total free blocks available */
+/*PWB	char	*m_tinode;	/* total free inodes avaliable */
+#endif UCBUFMOD
+};
+#ifdef NMOUNT
+struct mount mount[NMOUNT];
+#endif NMOUNT
+char	runin;			/* scheduling flag */
+char	runout;			/* scheduling flag */
+char	runrun;			/* scheduling flag */
+char	curpri;			/* more scheduling */
+int	maxmem;			/* actual max memory per process */
+int	*lks;			/* pointer to clock device */
+int	rootdev;		/* dev of root see conf.c */
+int	swapdev;		/* dev of swap see conf.c */
+int	swplo;			/* block number of swap space */
+int	nswap;			/* size of swap space */
+int	updlock;		/* lock for sync */
+int	rablock;		/* block to be read ahead */
+char	regloc[];		/* locs. of saved user registers (trap.c) */
+<File 1>
+ ncpk/drivers/vdh.c
+9718
+#include	"param.h"
+#include	"buf.h"
+#include	"net_net.h"
+#include	"net_netbuf.h"
+#include	"net_ncp.h"
+#include	"net_vdhstat.h"
+#include	"net_vdh_imp.h"
+#include	"net_vdh.h"
+
+char vdhlock -1;
+
+v_pan (msg)
+char *msg;
+{
+	register t;
+	struct vdhregs sv_regs;
+	register int *p, *q;
+
+	t = PS->integ;
+	spl7();
+	p = &sv_regs.wco;  q = &VDH->wco;
+	do {			/* save registers at time of panic */
+		*p-- = *q--;
+	} while q >= &VDH->csri;
+	VDH->csri =& ~ V_INTENB;
+	VDH->csro =& ~ (V_INTENB|V_TIMRUN);
+	panic (msg);
+}
+
+imp_init ()
+{
+	register	t, *ptr;
+	register int	oldps;
+
+	oldps = PS->integ;
+	spl_imp ();
+
+	vdhichn = 0;
+	prvictl = 0;
+	vstatebits = VDHILAST;
+	impldrd ();
+
+	hellonext = 2*VDH_T*VDH_R;
+	vdhosnd = -1;
+	vdhofill = 0;
+	vdhoack = V_HTOI;
+	for(t = 0; t < NCHNS; t++)
+		vdhouse[t] = -1;
+	ptr = &VDH->csro;
+	if ((*ptr & V_INTENB) == 0)
+	{
+		*ptr++ = V_TIMSEL;
+		*ptr = 12500/(HZ/10);	/* 125000 too big for one word */
+		*--ptr = V_TIMRUN | V_INTENB;
+	}
+
+	oimp.o_type = ih_nop;
+	for ( t = 3; --t>=0; )
+		sndnetbytes (&oimp,4,0,0,1); 
+	PS->integ = oldps;
+}
+
+#ifndef UCBUFMOD
+imp_output()
+{
+#endif UCBUFMOD
+#ifdef UCBUFMOD
+imp_output(msg)
+struct netbuf *msg;
+{
+	register sps;
+
+	sps = PS->integ;
+	spl_imp();
+	msg_q(&impoq, 0, 0, msg);
+#endif UCBUFMOD
+	if (((vstatebits ^ UP) & (OUTBUSY|UP)) == 0)
+	{
+		vdhostart ();
+	}
+#ifdef UCBUFMOD
+	PS->integ = sps;
+#endif UCBUFMOD
+}
+
+vdhiint ()
+{
+	register int	t;
+	register int	*p;
+	register int	*state;
+	int	*q;
+	int	xorrot;
+
+	if (++vdhlock)
+		v_pan ("VDH-i");
+#ifdef	PARANOID
+	v_bufck ();
+#endif	PARANOID
+
+	state = &vstatebits;
+	p = &VDH->csri;
+
+#ifndef VDHE
+	while ( (*p ^ V_GO) & (V_EOT|V_GO) ) {
+#endif not VDHE
+#ifdef VDHE
+	while (*p & V_EOT) {
+#endif VDHE
+		if (!(*state & TRYING)) {
+			VDH->csri =& ~ V_INTENB;
+			goto finis;
+		}
+		if (*p<0) {
+			vs.harderr++;
+			vdherr = *p; 
+			goto eot_done;
+		}
+
+		p = (*state&VDHIAB) ? &vdhibuf[1][0]:&vdhibuf[0][0];
+
+		if ((t = (VDH->cwai - p) - 1) < 0) {	/* null transfer */
+	wcerr:
+			/* log some error? */
+			goto eot_done;
+		}
+		if (*p & V_HTOI) {
+			vs.looped++;
+			goto eot_done;
+		}
+		if (*p & V_SPBIT) {
+			if (t != 0) goto wcerr;
+			if (*p>0) {
+				*state =| (SAWHELLO|OUT2GO);
+			} else {
+				hellounacked = 0;
+				helloinarow++;
+			}
+			goto eot_done;
+		}
+		if (t != (p->hibyte&077)) goto wcerr;
+		if (!(*state & UP)) {
+			vs.wpaks++;
+			goto eot_done;
+		}
+
+		xorrot = (prvictl ^ *p) << (14-NCHNS);
+		t = NCHNS-1;
+		do {
+			if (xorrot<0) {
+				vdhouse[t] = -1;
+				*state =| OUT2GO;
+			}
+			xorrot =<< 1;
+		} while (--t>=0);
+		prvictl = *p;
+		if ((*p & V_WCBITS)==0) {
+			vs.inulls++;
+			goto eot_done;
+		}
+		*state =| (ACK2SND|OUT2GO); 
+		if ((t = *p & V_CHBITS) != vdhichn) {
+			vs.chwrong++;
+			goto eot_done;
+		}
+		if ((*p ^ ((vdhoack>>t)*(V_EVNODD/V_C0ACK)))
+		     & V_EVNODD)  {
+			vs.idups++;
+			goto eot_done;
+		}
+		if (*state & VDHILAST) {
+			wakeup ( &imp );
+			vs.ifull++;
+			goto eot_done;
+		}
+		if (net_b.b_cntfree < (VDHDSIZE + NET_B_SIZE - 1)/NET_B_SIZE) {
+			vs.nobuf++;
+			*state =| VDHINEED; 
+			wakeup (&imp); 
+			goto eot_done;
+		}
+		t = (p++->hibyte & 077); 
+		swabuf (p,t); 
+		t =<< 1;
+		if (impi_msg==0) {
+			q = impleader ? &imp.type : &imp.pad1;
+			t =- 4;
+			*q++ = *p++; 
+			*q   = *p++; 
+		}
+		if (t && vectomsg (p,t,&impi_msg,1))
+			v_pan ("vdh: vectomsg failed");
+		impleader = 0; 
+		vdhoack =^ V_C0ACK<<vdhichn;
+		if (prvictl & V_LAST) {
+#ifdef	PARANOID
+			v_bufck();
+#endif	PARANOID
+			*state =| VDHILAST;
+			wakeup (&imp);
+		}
+		vdhichn++; 
+		vdhichn =& NCHNS-1;
+		vs.igood++;
+eot_done:
+
+		p = &VDH->csri;
+
+		VDH->cwai = (*state&VDHIAB)?&vdhibuf[1][0]:&vdhibuf[0][0];
+#ifndef	VDHE
+		VDH->wci = VDHSIZE; 
+		do {
+			*p =| V_GO;
+		} while !(*p&V_GO);
+#endif	not VDHE
+#ifdef	VDHE
+		VDH->wci = -(VDHSIZE*2);
+		*p =| V_GO;
+#endif	VDHE
+		*state =^ VDHIAB;
+		*p = (*state&VDHIAB) ? (V_ABSEL | V_INTENB) : V_INTENB; 
+	} 
+	if (((*state ^ OUT2GO) & (OUT2GO|OUTBUSY)) == 0) {
+		vdhostart();
+	}
+	*state =& ~OUT2GO;
+finis:
+#ifdef	PARANOID
+	v_bufck ();
+#endif	PARANOID
+
+	--vdhlock;
+}
+
+vdhoint ()
+{
+	register	*p;
+	register	xorrot;
+	register	*state;
+
+	if (++vdhlock)
+		v_pan ("VDH-o");
+
+
+	state = &vstatebits;
+
+	if (VDH->csro&V_TIMINT)
+	{
+		VDH->csro =& ~ V_TIMINT;
+#ifdef	NOCLOCK
+		*state =| CLOCKINT;
+#endif	NOCLOCK
+		if (ncpopnstate == 0)
+		{
+			*state =& ~(UP | TRYING);
+			goto clock_done;
+		}
+		for(xorrot = 0; xorrot < NCHNS; xorrot++)
+			if(vdhouse[xorrot] > 0)
+				vdhouse[xorrot]--;
+		if (--hellonext > 0)
+			goto clock_done;
+		hellonext =+ VDH_R;
+
+		switch (*state & (UP | TRYING))
+		{
+		case UP|TRYING:
+			if (hellounacked > VDH_T)  
+			{
+				*state =& ~(TRYING | UP);
+				hellonext = 077777;
+				needinit++;
+				wakeup ( &imp ); 
+				goto	clock_done;
+			}  
+			break;
+		case TRYING:
+			if (hellounacked)
+			{
+				helloinarow = 0;
+			}
+			else
+			if (helloinarow >= VDH_K)
+			{
+
+				*state =| UP;
+				wakeup ( &imp );
+			}
+			break;
+		default:
+			*state =| TRYING;
+			*state =& ~(SAWHELLO | SENDHELLO | UP);
+#ifndef	VDHE
+			VDH->csri = 0;
+			VDH->cwai = &vdhibuf[0][0];
+			VDH->wci = VDHSIZE;
+			VDH->csri = V_GO | V_ABSEL;
+			VDH->cwai = &vdhibuf[1][0];
+			VDH->wci = VDHSIZE;
+			VDH->csri = V_INTENB | V_GO;
+#endif	not VDHE
+#ifdef	VDHE
+			VDH->csri = 0;
+			VDH->cwai = &vdhibuf[0][0];
+			VDH->wci = -(VDHSIZE*2);
+			VDH->csri = V_GO;
+			VDH->csri =| V_ABSEL;
+			VDH->cwai = &vdhibuf[1][0];
+			VDH->wci = -(VDHSIZE*2);
+			VDH->csri = V_INTENB | V_GO | V_ABSEL;
+			VDH->csri =& ~ V_ABSEL;
+#endif	VDHE
+		}
+		*state =| SENDHELLO;
+	}
+
+clock_done:
+
+	if (VDH->csro&V_EOTINT)
+	{
+		*state =& ~OUTBUSY;
+	}
+
+	if ((*state & OUTBUSY) == 0) {
+		vdhostart();
+#ifdef	PARANOID
+		v_bufck ();
+#endif	PARANOID
+	}
+
+
+	--vdhlock;
+
+#ifdef NOCLOCK
+	if (*state & CLOCKINT)
+	{
+		*state =& ~CLOCKINT;
+		vdh_clock();	/* no return */
+	}
+#endif	NOCLOCK
+}
+
+vdhostart ()
+{
+	register int	*p;
+	register int	i;
+	register int	*state;
+
+	state = &vstatebits;
+
+	if ((*state & TRYING) == 0)
+		return;
+#ifdef	PARANOID
+	v_bufck();
+#endif	PARANOID
+	if (*state & SAWHELLO)
+	{
+		I_HEARD_YOU;
+		*state =& ~ SAWHELLO;
+		return;
+	}
+	if (*state & SENDHELLO)
+	{
+		HELLO;
+		hellounacked++;
+		*state =& ~SENDHELLO;
+		return;
+	}
+	if ((*state & UP) == 0)
+		return;
+	/* Proceed below if we are UP&TRYING -- I just didn't want */
+	/* to indent that much.... */
+
+	fillochans();
+	for (i = 0; i < NCHNS; i++)
+	{
+		vdhosnd++;
+		vdhosnd =& NCHNS-1;
+		if (vdhouse[vdhosnd] == 0) {
+			p = vdhobuf [vdhosnd];
+			p [0] = (p [0] & ~V_ACKBITS) | vdhoack;
+			vdhsnd (p);
+			vdhouse[vdhosnd] = HZ*100/1000;	/* hold off 100 ms */
+			*state =& ~ACK2SND;
+			return;
+		}
+	}
+		/* No data to be sent */
+	if (*state & ACK2SND) {	/* And an ack to send? */
+		OACK;
+		*state =& ~ACK2SND;
+	}
+}
+
+#ifndef UCBUFMOD
+struct	buf vdbuf;
+#endif UCBUFMOD
+#ifdef UCBUFMOD
+struct netbuf *vdhmsg;
+#endif UCBUFMOD
+
+fillochans ()
+{
+	register int	*p;
+	register char	*bp;
+	register int	len;
+
+	while (vdhouse[vdhofill] < 0) {
+#ifndef UCBUFMOD
+		if (vdbuf.b_dev==0)
+		{
+			bp = impotab.d_actf;
+			if (bp==0)
+				return;
+			impotab.d_actf = bp->b_forw;
+			bytesout (&bp->b_dev, &vdbuf, BUFSIZE, 1);
+			vdbuf.b_wcount = msglen (vdbuf.b_dev);
+			len = 4;
+		}
+		else
+			len = min (VDHDSIZE, vdbuf.b_wcount);
+		bytesout (&vdbuf.b_dev, p = &vdhobuf[vdhofill][1], len, 1);
+		vdbuf.b_wcount =- len;
+		if (vdbuf.b_wcount<0)
+			v_pan ("Bad wcount");
+#endif UCBUFMOD
+#ifdef UCBUFMOD
+		if(vdhmsg==0) {		/* must pick up new message? */
+			if((bp = impoq) == 0)	/* if nothing to output */
+				return;		/* just go away */
+			bp->b_resv =| b_eom;	/* so I'm paranoid */
+			do {		/* remove first message from q */
+				bp = bp->b_qlink;
+			} while( (bp->b_resv&b_eom) == 0 );
+			/* now pointing at last buffer of msg */
+			if(bp == impoq) {	/* only message in q? */
+				impoq = 0;	/* clear q pointer */
+			} else {
+				len = impoq->b_qlink;	/* use len as temp */
+				impoq->b_qlink = bp->b_qlink;
+				bp->b_qlink = len;
+			}
+			vdhmsg = bp; len = 4;	/* only header in first packet */
+		} else
+			len = VDHDSIZE;
+		len =- bytesout(&vdhmsg, p = &vdhobuf[vdhofill][1], len, 1);
+#endif UCBUFMOD
+		*--p = vdhofill;
+		len =>> 1;
+		p->hibyte = len;
+#ifndef UCBUFMOD
+		if (vdbuf.b_wcount==0)
+#endif UCBUFMOD
+#ifdef UCBUFMOD
+		if (vdhmsg==0)
+#endif UCBUFMOD
+			*p =| V_LAST;
+		if ( (prvictl>>vdhofill) & V_C0ACK )
+			*p =| V_EVNODD;
+		swabuf (&p[1], len);
+		vdhouse[vdhofill] = 0;
+		vdhofill++;
+		vdhofill =& NCHNS-1;
+		vs.opaks++;
+	}
+}
+
+#ifndef UCBUFMOD
+msglen(abp)	char *abp;
+{
+	register char	*bp;
+	register int	cnt;
+
+	bp = abp;
+	if(bp==0)	return 0;
+	for( cnt = bp->b_len; (bp=bp->b_qlink)!=abp; )
+		cnt =+ bp->b_len&0377;
+
+	return cnt;
+}
+#endif UCBUFMOD
+
+impldrd ()
+{
+	spl_imp ();
+
+	if (!(vstatebits & VDHILAST))
+		log_to_ncp ("Bad impldrd");
+	else
+	{
+		impleader = 1;
+		impi_msg = 0;		/* can a buffer get lost here ? */
+		vstatebits =& ~VDHILAST;
+	}
+}
+
+vdh1snd (oneliner)  int oneliner;
+{
+	static vdh1buf;		/* static because we dma out of here */
+	vdh1buf = oneliner;
+
+	vdhsnd (&vdh1buf);
+}
+
+vdhsnd (buffer)  int *buffer;
+{
+	vstatebits =| OUTBUSY;
+	if ((buffer[0]&V_HTOI) == 0) v_pan ("vdhsnd");
+	VDH->cwao = buffer; 
+#ifndef	VDHE
+	VDH->wco = (buffer->hibyte & 077)+1;
+#endif	not VDHE
+#ifdef	VDHE
+	VDH->wco = -(((buffer->hibyte & 077)+1)<<1);
+#endif	VDHE
+	VDH->csro =& ~ V_EOTINT; 
+	VDH->csro =| V_GO;
+}
+<File 1>
+ ken/acct.c
+2235
+#
+#include "param.h"
+#include "inode.h"
+#include "user.h"
+#include "acct.h"
+#include "proc.h"
+
+#ifdef ACCTSYS
+
+int acc_lock;		/* lock for exclusive use */
+char	accsvuid;
+
+char	accbuf	[512];
+char	*accbufp accbuf;
+char	acc_vec [ACCVLEN]; /* for system users to build in */
+
+accinput (vecaddr)	/* internal form */
+char	*vecaddr;
+{
+	register int n;
+	register char *vptr, *bptr;
+
+	acc_lock++;
+	while (acc_lock > 1)
+		sleep( &acc_lock, -1 );
+	bptr = accbufp;
+	vptr = vecaddr;
+	for (n=ACCVLEN; n--; *bptr++ = *vptr++);
+	accbufp = bptr;
+	accwrite ();
+	if (--acc_lock) signal ( &acc_lock );
+}
+
+accput ()	/* called via sys accput;addr;passwd */
+{
+	register int n, t;
+	register char *cp;
+
+	acc_lock++;
+	while (acc_lock > 1)
+		sleep( &acc_lock, -1 );
+	u.u_error = 0;
+	if (u.u_arg[1] != ACCPSWD) {
+		u.u_error = EACCT;
+		if (--acc_lock) signal ( &acc_lock );
+		return;
+	}
+	cp = accbufp;
+	u.u_base = u.u_arg[0];
+	u.u_count = n = ACCVLEN;
+	u.u_segflg = 0;	/* data from user space */
+	do {
+		if (( t = cpass () ) < 0) {
+			printf ("ACC cpass error \n");
+		}
+		*cp++ = t;
+	} while --n;
+	accbufp = cp;
+	accwrite ();
+	if (--acc_lock) signal ( &acc_lock );
+}
+
+
+accwrite ()
+{
+	register int *ip;
+	extern schar ();
+
+	if (accbufp < &accbuf[sizeof accbuf - ACCVLEN])
+		return;
+	/*
+	 * set su priv, open file, check access, and write, then reset
+	 * su priv
+	 */
+	accsvuid = u.u_uid;		/* save uid, and set su priv */
+	u.u_uid = 0;
+	u.u_error = 0;			/* open file */
+	u.u_dirp = "/usr/lpd/logs/logfile";
+	ip = namei (&schar, 0);		/* file must already be on disk */
+	if (ip == NULL)
+		goto out;	/* else fix pointer and return */
+	if (( !access (ip, IWRITE))	/* su allowed to write ? */
+	&& (ip->i_mode & IFMT) == 0) {	/* is it a data file on disk */
+		u.u_offset[0] = ip->i_size0;	/* seek eof */
+		u.u_offset[1] =
+			ip->i_size1 & 0177000; /* force to a block boundary */
+		u.u_base = accbuf;	/* set up for write */
+		u.u_count = 512;
+		u.u_segflg = 1;		/* we are writing from sys space */
+		writei (ip);		/* do the io */
+	}
+	iput (ip);			/* close the file */
+out:
+	u.u_uid = accsvuid;		/* relinquish su priv */
+	u.u_error = 0;
+	accbufp = accbuf;
+}
+
+#endif ACCTSYS
+<File 1>
+ ncpp/ftp-s/srvrdaemon.c
+2242
+#               /* Server FTP daemon */
+
+#include "net_open.h"
+#define SIGINR 15
+#include "spawn.c"
+
+/*name:
+	srvrdaemon
+
+installation:
+	if $1x = newerx goto newer
+	if $1e = finale goto finale
+	cc -L/usr/include:..:/usr/sys/ncpp srvrdaemon.c
+	exit
+: newer
+	if ! { newer srvrdaemon.c /usr/net/etc/ftpsvr } exit
+	echo ncpp/ftp-s/srvrdaemon.c:
+: finale
+	cc -L/usr/include:..:/usr/sys/ncpp -O -s srvrdaemon.c
+	if ! -r a.out exit
+	if ! -r /usr/sys/ncpp/ftp-s/srvrdaemon.c goto same
+	if { cmp -s srvrdaemon.c /usr/sys/ncpp/ftp-s/srvrdaemon.c } goto same
+	su cp srvrdaemon.c /usr/sys/ncpp/ftp-s/srvrdaemon.c
+	su chmod 444 /usr/sys/ncpp/ftp-s/srvrdaemon.c
+	rm -f srvrdaemon.c
+: same
+	su rm -f /usr/net/etc/ftpsvr
+	su cp a.out /usr/net/etc/ftpsvr
+	rm -f a.out
+	su chmod 544 /usr/net/etc/ftpsvr
+	su chown root /usr/net/etc/ftpsvr
+	su chgrp system /usr/net/etc/ftpsvr
+
+function:
+	to handle server ftp connections to socket 3 and start
+	up a program to handle the traffic.  It was done as two
+	pieces to keep down the size of process waiting for connections
+	to open( that is a smaller program to swap in and out ).
+
+
+algorithm:
+	forever
+		set up params for a server connection to socket 3
+		wait for a connection to complete
+
+		spawn a child process
+			make file desc 0 and 1 the telnet file
+			exec the server process
+		close the network file
+
+
+parameters:
+	none
+
+returns:
+	nothing
+
+globals:
+	openparams=
+
+calls:
+	open (sys)
+	fork (sys)
+	exec (sys)
+	dup  (sys)
+	close(sys)
+
+called by:
+	/etc/rc file as /etc/srvrdaemon
+
+history:
+	initial coding 4/18/76 by S. F. Holmgren
+
+*/
+
+struct openparams openparams;
+
+main( argc, argv )
+int argc;
+char **argv;
+{
+	register netfid;
+
+signal(SIGINR,1);               /* ignore INS interrupts */
+while( 1 )
+{
+	netfid = -1;
+	while( netfid < 0 )
+	{
+		openparam.o_lskt = 3;
+		openparam.o_type = 2;
+		openparam.o_fskt[0] = 0;
+		openparam.o_fskt[1] = 0;
+		netfid = open( "/dev/net/anyhost",&openparam );
+	}
+
+	if( spawn() == 0 )
+	{
+		close( 0 );
+		dup( netfid );
+		close( 1 );
+		dup( netfid );
+		close( netfid );
+		execl( "/usr/net/etc/srvrftp", argv[0], "server process", 0);
+		exit( 1 );
+	}
+	close( netfid );
+}
+}
+<File 1>
+ dmr/hp.c
+4716
+#
+/*
+ */
+
+/*
+ * RP04 disk driver
+ *
+ * This driver has been tested on a working RP04 for a few hours.
+ * It does not attempt ECC error correction and is probably
+ * deficient in general in the case of errors and when packs
+ * are dismounted.
+ */
+
+#include "param.h"
+#include "buf.h"
+#include "conf.h"
+#include "user.h"
+
+struct {
+	int	hpcs1;	/* Control and Status register 1 */
+	int	hpwc;	/* Word count register */
+	int	hpba;	/* UNIBUS address register */
+	int	hpda;	/* Desired address register */
+	int	hpcs2;	/* Control and Status register 2*/
+	int	hpds;	/* Drive Status */
+	int	hper1;	/* Error register 1 */
+	int	hpas;	/* Attention Summary */
+	int	hpla;	/* Look ahead */
+	int	hpdb;	/* Data buffer */
+	int	hpmr;	/* Maintenance register */
+	int	hpdt;	/* Drive type */
+	int	hpsn;	/* Serial number */
+	int	hpof;	/* Offset register */
+	int	hpca;	/* Desired Cylinder address register*/
+	int	hpcc;	/* Current Cylinder */
+	int	hper2;	/* Error register 2 */
+	int	hper3;	/* Error register 3 */
+	int	hppos;	/* Burst error bit position */
+	int	hppat;	/* Burst error bit pattern */
+	int	hpbae;	/* 11/70 bus extension */
+};
+
+#define	HPADDR	0176700
+#define	NHP	8
+
+struct {
+	char	*nblocks;
+	int	cyloff;
+} hp_sizes[] {
+	9614,	0,		/* cyl 0 thru 23 */
+				/* cyl 24 thru 43 available */
+	-1,	44,		/* cyl 44 thru 200 */
+	-1,	201,		/* cyl 201 thru 357 */
+	20900,	358,		/* cyl 358 thru 407 */
+				/* cyl 408 thru 410 blank */
+	40600,	0,
+	40600,	100,
+	40600,	200,
+	40600,	300,
+};
+
+
+struct	devtab	hptab;
+struct	buf	hpbuf;
+
+char	hp_openf;
+
+			/* Drive Commands */
+#define	GO	01
+#define	PRESET	020
+#define	RECAL	06
+#define RCLR	010
+#define OFFSET	014
+
+#define	READY	0200	/* hpds - drive ready */
+#define	PIP	020000	/* hpds - Positioning Operation in Progress */
+#define	ERR	040000	/* hpcs1 - composite error */
+
+#define	DU	040000	/* hper1 - Drive Unsafe	*/
+#define	DTE	010000  /* hper1 - Drive Timing Error	*/
+#define	OPI	020000  /* hper1 - Operation Incomplete	*/
+		/* Error Correction Code errors */
+#define DCK	0100000	/* hper1 - Data Check error */
+#define ECH	0100    /* hper1 - ECC hard error */
+
+#define CLR	040	/* hpcs2 - Controller Clear */
+
+#define FMT22	010000	/* hpof - 16 bit /word format */
+/*
+ * Use av_back to save track+sector,
+ * b_resid for cylinder.
+ */
+
+#define	trksec	av_back
+#define	cylin	b_resid
+
+hpopen(dev)
+{
+
+	if(!hp_openf)
+		HPADDR->hpcs2 = CLR;
+	if(! ( (hp_openf>>(dev.d_minor>>3))&1) ) {
+		hp_openf =| 1<<(dev.d_minor>>3);
+		HPADDR->hpcs2 = dev.d_minor>>3;
+		HPADDR->hpcs1 = RCLR|GO;
+		HPADDR->hpcs1 = PRESET|GO;
+		HPADDR->hpof = FMT22;
+	}
+}
+
+hpstrategy(abp)
+struct buf *abp;
+{
+	register struct buf *bp;
+	register char *p1, *p2;
+
+	bp = abp;
+	p1 = &hp_sizes[bp->b_dev.d_minor&07];
+	if (bp->b_dev.d_minor >= (NHP<<3) ||
+	    bp->b_blkno >= p1->nblocks) {
+		bp->b_flags =| B_ERROR;
+		iodone(bp);
+		return;
+	}
+	bp->av_forw = 0;
+	bp->cylin = p1->cyloff;
+	p1 = bp->b_blkno;
+	p2 = lrem(p1, 22);
+	p1 = ldiv(p1, 22);
+	bp->trksec = (p1%19)<<8 | p2;
+	bp->cylin =+ p1/19;
+	spl5();
+	if ((p1 = hptab.d_actf)==0)
+		hptab.d_actf = bp;
+	else {
+		for (; p2 = p1->av_forw; p1 = p2) {
+			if (p1->cylin <= bp->cylin
+			 && bp->cylin <  p2->cylin
+			 || p1->cylin >= bp->cylin
+			 && bp->cylin >  p2->cylin) 
+				break;
+		}
+		bp->av_forw = p2;
+		p1->av_forw = bp;
+	}
+	if (hptab.d_active==0)
+		hpstart();
+	spl0();
+}
+
+hpstart()
+{
+	register struct buf *bp;
+
+	if ((bp = hptab.d_actf) == 0)
+		return;
+	hptab.d_active++;
+	HPADDR->hpcs2 = bp->b_dev.d_minor >> 3;
+	HPADDR->hpca = bp->cylin;
+	rhstart(bp, &HPADDR->hpda, bp->trksec, &HPADDR->hpbae);
+}
+
+hpintr()
+{
+	register struct buf *bp;
+	register int ctr;
+
+	if (hptab.d_active == 0)
+		return;
+	bp = hptab.d_actf;
+	hptab.d_active = 0;
+	if (HPADDR->hpcs1 & ERR) {		/* error bit */
+		deverror(bp, HPADDR->hpcs2, HPADDR->hper1);
+		deverror(bp,HPADDR->hper2);
+		if(HPADDR->hper1 & (DU|DTE|OPI)) {
+			HPADDR->hpcs2 =| CLR;
+			HPADDR->hpcs1 = RECAL|GO;
+			ctr = 0;
+			while ((HPADDR->hpds&PIP) && --ctr);
+		}
+		HPADDR->hpcs1 = RCLR|GO;
+		if (++hptab.d_errcnt <= 10) {
+			hpstart();
+			return;
+		}
+		bp->b_flags =| B_ERROR;
+	}
+	hptab.d_errcnt = 0;
+	hptab.d_actf = bp->av_forw;
+	bp->b_resid = HPADDR->hpwc;
+	iodone(bp);
+	hpstart();
+}
+
+hpread(dev)
+{
+
+	if(hpphys(dev))
+	physio(hpstrategy, &hpbuf, dev, B_READ);
+}
+
+hpwrite(dev)
+{
+
+	if(hpphys(dev))
+	physio(hpstrategy, &hpbuf, dev, B_WRITE);
+}
+
+hpphys(dev)
+{
+	register c;
+
+	c = lshift(u.u_offset, -9);
+	c =+ ldiv(u.u_count+511, 512);
+	if(c > hp_sizes[dev.d_minor & 07].nblocks) {
+		u.u_error = ENXIO;
+		return(0);
+	}
+	return(1);
+}
+
+<File 1>
+ dmr/rx.c
+4650
+#
+/*
+ * RX floppy disk driver
+ * Ron Broersma -- Naval Ocean Systems Center, San Diego, California
+ */
+
+#include "param.h"
+#include "buf.h"
+#include "conf.h"
+#include "user.h"
+#include "seg.h"
+
+#ifndef RXADDR
+#define	RXADDR	0177170
+#endif not RXADDR
+#define NRX	2
+#define	NRXBLK	500
+
+#define GO	1
+#define FILL	0
+#define EMPTY	2
+#define WRITE	4
+#define READ	6
+#define RDSTAT	012
+#define RDERR	016
+#define IENABLE	0100
+#define	TR	0200
+#define DRVRDY	0200
+#define DONE	040
+#define INIT	040000
+#define INITDONE 4
+
+#define WAIT while(!(RXADDR->rxcs&(TR | DONE)))
+
+struct {
+    int rxcs;
+    int rxdb;
+};
+
+struct devtab rxtab;
+struct buf rrxbuf;
+struct rxadr {
+    char sector;
+    char track;
+};
+
+rxstrategy(abp)
+struct buf *abp;
+{
+	register struct buf *bp;
+
+	bp = abp;
+	if (bp->b_blkno >= NRXBLK) {
+		if (bp->b_blkno==NRXBLK)
+			bp->b_wcount = max(bp->b_wcount, -128);
+					/* so we don't get errors when */
+					/* trying to read the last 2 sectors */
+		else {
+			bp->b_flags =| B_ERROR;
+			iodone(bp);
+			return;
+		}
+	}
+	bp->b_resid = -bp->b_wcount; /* used to tell how far to go */
+	bp->b_wcount = 0; /* used to tell how far we are (in bytes!) */
+	bp->av_forw = 0;
+	spl5();
+	if (!(rxtab.d_actf))
+		rxtab.d_actf = bp;
+	else
+		rxtab.d_actl->av_forw = bp;
+	rxtab.d_actl = bp;
+	if (!(rxtab.d_active)) rxstart();
+	spl0();
+}
+
+rxaddr(abp)
+struct buf *abp;
+{
+	register int sect, track;
+	register struct buf *bp;
+	int t1, t2, dtyp;
+
+	bp = abp;
+	dtyp = (bp->b_dev.d_minor&6) >> 1;
+	sect = (bp->b_blkno<<2) + (bp->b_wcount>>7);
+	if (!dtyp)
+		sect = sect==36?NRXBLK*4:sect==NRXBLK*4?36:sect;
+	t1 = sect/26;
+	if ((!dtyp) || dtyp == 2) {
+		t2 = sect%26;
+		track = t1 + (dtyp?1:0);
+		sect = 6*t1 + t2*2 + (t2>=13?1:0);
+	}
+	else track = t1;
+	return((track << 8) + sect%26 + 1);
+}
+
+rxto(word)
+{
+	WAIT;
+	RXADDR->rxdb.lobyte = word.lobyte;
+	WAIT;
+	RXADDR->rxdb.lobyte = word.hibyte;
+}
+
+rxfrom()
+{
+	int word;
+
+	WAIT;
+	word.lobyte = RXADDR->rxdb.lobyte;
+	WAIT;
+	word.hibyte = RXADDR->rxdb.lobyte;
+	return(word);
+}
+
+char sbuf[128];
+
+rxdata(bp, command, wcount)
+struct buf *bp;
+{
+	register char *cp;
+	register int nbytes;
+	register int bn;
+	int tn[2];
+#ifndef UCBUFMOD
+	int sa, sps;
+#endif not UCBUFMOD
+
+	cp = bp;	/* for speed and size */
+	tn[0] = cp->b_xmem;  tn[1] = cp->b_addr;
+	dpadd(tn, cp->b_wcount);
+	bn = lshift(tn, -6);
+	tn[1] =& 077;
+	RXADDR->rxcs = command | GO;
+	nbytes = wcount<<1;
+	if (command == FILL) {
+#ifndef UCBUFMOD
+		cp = ka6-6;  sa = cp->integ;
+		sps = PS->integ;  PS->integ = 030340;
+		cp->integ = bn;
+		copyin(tn[1], sbuf, nbytes);
+		cp->integ = sa;  PS->integ = sps;
+#endif not UCBUFMOD
+#ifdef UCBUFMOD
+		btk(bn, tn[1], sbuf, wcount);
+#endif UCBUFMOD
+		cp = sbuf;
+		do {
+			WAIT;
+			RXADDR->rxdb.lobyte = *cp++;
+		} while --nbytes;
+		while(!(RXADDR->rxcs&DONE)) rxto(0);
+	}
+	else {
+		cp = sbuf;
+		do {
+			WAIT;
+			*cp++ = RXADDR->rxdb.lobyte;
+		} while --nbytes;
+#ifndef UCBUFMOD
+		cp = ka6-6;  sa = cp->integ;
+		sps = PS->integ;  PS->integ = 030340;
+		cp->integ = bn;
+		copyout(sbuf, tn[1], wcount<<1);
+		cp->integ = sa;  PS->integ = sps;
+#endif not UCBUFMOD
+#ifdef UCBUFMOD
+		ktb(bn, tn[1], sbuf, wcount);
+#endif UCBUFMOD
+		while(!(RXADDR->rxcs&DONE)) rxfrom();
+	}
+}
+
+rxstart()
+{
+	register struct buf *bp;
+	register cmd;
+
+	if (!(bp = rxtab.d_actf))
+		return;
+	cmd = WRITE | GO | IENABLE | ((bp->b_dev.d_minor&1)<<4);
+	if (bp->b_flags&B_READ) 
+		cmd =| READ;
+		else rxdata(bp, FILL, min(bp->b_resid, 64));
+	rxtab.d_active++;
+	RXADDR->rxcs = cmd;
+	rxto(rxaddr(bp));
+}
+
+rxintr()
+{
+	register struct buf *bp;
+	int ersave;
+
+	if (!(rxtab.d_active))
+		return;
+	rxtab.d_active = 0;
+	bp = rxtab.d_actf;
+	if (RXADDR->rxcs < 0) {
+		RXADDR->rxcs = RDSTAT | GO | ((bp->b_dev.d_minor&1)<<4);
+		while (!(RXADDR->rxcs&DONE)); 
+		if ((ersave = RXADDR->rxdb) & DRVRDY) {
+			RXADDR->rxcs = RDERR;
+			while(!(RXADDR->rxcs&DONE));
+			deverror(bp, ersave, RXADDR->rxdb);
+			RXADDR->rxcs = INIT;
+			while (!(RXADDR->rxdb&INITDONE));
+			if (++rxtab.d_errcnt <= 10) {
+				rxstart();
+				return;
+			}
+		}
+		bp->b_flags =| B_ERROR;
+	}
+	if (bp->b_flags&B_READ) 
+		rxdata (bp, EMPTY, min(bp->b_resid, 64));
+	bp->b_resid =- min(bp->b_resid, 64);
+	bp->b_wcount =+ 128;
+	if (bp->b_resid && !(bp->b_flags&B_ERROR)) {
+		rxstart();
+		return;
+	}
+	rxtab.d_errcnt = 0;
+	rxtab.d_actf = bp->av_forw;
+	iodone(bp);
+	rxstart();
+}
+
+rxread(dev)
+{
+	physio(rxstrategy, &rrxbuf, dev, B_READ);
+}
+
+rxwrite(dev)
+{
+	physio(rxstrategy, &rrxbuf, dev, B_WRITE);
+}
+<File 1>
+ ncpp/mail/mailer.c
+15964
+#/*
+Module Name:
+	mailer.c -- ARPAnet mailer daemon
+
+Installation:
+	if $1x = newerx goto newer
+	if $1e = finale goto finale
+	cc -c mailer.c
+	if ! -r mailer.o exit
+	cc mailer.o /usr/net/hnconv.c
+	rm -f mailer.o hnconv.o
+	exit
+: newer
+	if ! { newer mailer.c /usr/net/etc/mailer } exit
+	echo ncpp/mail/mailer.c:
+: finale
+	cc -O -c mailer.c
+	if ! -r mailer.o exit
+	cc -O -s mailer.o /usr/net/hnconv.c -lj
+	if ! -r a.out exit
+	if ! -r /usr/sys/ncpp/mail/mailer.c goto same
+	if { cmp -s mailer.c /usr/sys/ncpp/mail/mailer.c } goto same
+	su cp mailer.c /usr/sys/ncpp/mail/mailer.c
+	su chmod 444 /usr/sys/ncpp/mail/mailer.c
+	rm -f mailer.c
+: same
+	if -r /usr/net/etc/mailer su rm -f /usr/net/etc/mailer
+	su cp a.out /usr/net/etc/mailer
+	rm -f a.out mailer.o hnconv.o
+	su chmod 555 /usr/net/etc/mailer
+	su chown bin /usr/net/etc/mailer
+	su chgrp bin /usr/net/etc/mailer
+
+Synopsis:
+	mailer [ delay-time [ bypass-count [ log-word [ debug-dir ] ] ] ]
+
+Function:
+	Deliver ARPAnet mail.
+
+Module History:
+	modified for Illinois NCP
+	return undeliverable mail as a message
+	fixed write length in returned.mail
+	6Mar79 Greg Noel.  Introduced paranoia about slugish hosts.
+	30Apr79 Greg Noel.  Transient remote errors are now retried later.
+	15May79 Greg Noel.  450 User Unknown is hard error, not transient.
+*/
+#include "net_open.h"
+
+struct openparam openparam;
+
+#define true 1
+#define false 0
+#define SLPTIME  600 /* default sleep time   */
+#define NTBYPASS 3   /* default bypass count */
+#define MSGSEP "\001\001\001\001\n"
+#define MSGSEPL 5
+
+char hostname[100];
+char mailcomd[256] { "mail <list of user names>                           "};
+char returnto[256];
+char linebuf[256];
+char badhost[256];
+char mailbuf[512];
+char netbuf[512];
+
+
+int dirfd;
+int nflag, nflag1, tvec[2];
+int slptime;
+int ntbypass;
+
+/*	don't separate these two declarations	*/
+int entry;
+char filename[16];
+/*	don't separate the preceding two declarations */
+
+int statbuf[32];
+int timoutflg;
+int mailproc;
+int timeout();
+struct fcb {
+	int f_fd;
+	char *f_ptr;
+	char *f_buf;
+	int f_count;
+}
+	netfcb,mailfcb;
+
+/* name:
+	maildaemon
+
+function:
+	To see if there is any mail waiting delivery to some other
+	site on the network, and deliver it.
+
+algorithm:
+	If there is any mail, send it.
+	Wait a while and look for mail again.
+
+parameters:
+	If argv[1] is present, it is the number of seconds to sleep
+	between passes through the mail directory.  If it is absent
+	or 0, a default value is used (SLPTIME).
+	If argv[2] is present, it is the number of passes through
+	which to bypass mail for hosts which are not responding.
+	If argv[3] is present, messages will be written out indicating
+	the progress of the mailer.
+	If argv[4] is present, use this as the mail directory and make
+	one pass through it.  Used for debugging.
+
+returns:
+
+globals:
+	dirfd		fd of /usr/netmail
+
+calls:
+	open	sys
+	seek	sys
+	printf	library
+	get_next_file
+	ship_it_off
+
+called by:
+
+history:
+	Design and initial coding by Mark Kampe, 12/27/75
+
+ */
+main(argc, argv)
+ int argc;
+ char **argv;
+{
+	int i;
+	extern int fout;
+
+	signal(1,1);
+	signal(2,1);
+	signal(3,1);
+
+	mailproc = getpid();
+	if (argc < 2 ||  (slptime=atoi(argv[1])) <= 0) slptime = SLPTIME;
+	if (argc < 3 || (ntbypass=atoi(argv[2])) <= 0) ntbypass = NTBYPASS;
+	if (argc > 3) nflag++;
+
+	if (chdir(argc > 4 ? argv[4] : "/usr/netmail") < 0  ||
+	   (dirfd = open(".",0)) < 0) {
+		printf("Unable to open /usr/netmail\n");
+		exit(-1);
+	}
+
+	fout = dup(1);	/* buffer all further output */
+	log("Sleep time = %d, Bypass = %d\n", slptime, ntbypass);
+	nflag1 = 0;
+
+	openparam.o_host = 0;
+	netfcb.f_fd = -1;
+loop:
+		/*
+		 *  The mailer should lock this directory so that conflicts
+		 *  with other incarnations of the mailer will not occur.
+		 *  The lock should be established here and removed below.
+		 *  The routine get_next_file must be modified to skip
+		 *  over the lock.  Another alternative is to fork for each
+		 *  new destination host encountered and lock only on the
+		 *  basis of destination; this will maximize parallelism
+		 *  of transmission.
+		 */
+	seek(dirfd,0,0);
+	while(get_next_file())
+		ship_it_off();
+	closenet();	/* close last connection */
+
+	for (i=0; i<256; i++)
+	if (badhost[i]) --badhost[i];
+
+	if(nflag1) {
+		log("Ending cycle\n");
+		nflag1 = 0;
+	}
+
+		/* Remove lock here.... */
+
+	if(argc>4) exit(0);	/* used for testing */
+
+	sleep(slptime);
+	goto loop;
+}
+
+/* name:
+	log
+
+function:
+	to log something if logging is enabled.
+
+algorithm:
+	if logging is enabled
+		print leading banner
+		print message to be logged
+
+parameters:
+	identical to printf
+
+returns:
+	nothing
+
+globals:
+	nflag	set if logging is enabled
+	tvec	time at which current cycle began
+
+calls:
+	printf	(sys)
+	time	(sys)
+	ctime	(sys)
+
+called by:
+	many places
+
+history:
+	24 Aug 77 coded by Greg Noel
+	24 Jul 78 modified by Greg Noel to condense logging printout
+
+*/
+log(t, a, b, c, d)
+{
+	if (nflag)
+	{	time(tvec);
+		printf("%-16.16sMailer: ", ctime(tvec)+4);
+		printf(t, a, b, c, d);
+		flush();
+		nflag1++;
+	}
+}
+
+/* name:
+	get_next_file
+
+function:
+	To find get the next file in /usr/netmail and set up all
+	of the parameters for the mailing.
+
+algorithm:
+	Read next non-empty record
+	if end of file, return error
+	set up hostname
+		mail command line
+		file name (for future deletion)
+		root of sender for possible return.
+	return true
+
+parameters:
+
+returns:
+	boolean	true means a file was found and set up
+		false means no more files in directory
+
+globals:
+	hostname
+	mailcomd
+	mailfcb
+	filename
+	dirfd
+	returnto
+
+calls:
+	read	(sys)
+	open	(sys)
+	getline
+	unlink	(sys)
+
+called by:
+	main
+
+history:
+	Initial coding by Mark Kampe	11/27/75
+
+ */
+get_next_file()
+{	register char *p;
+	register char *s;
+	register int i;
+
+ loop:	i = read(dirfd,&entry,16);
+	if (i != 16) return(false);
+	if (entry == 0) goto loop;
+	if (filename[0] == '.') goto loop;
+
+	if (filename[13]) filename[14] = '\000';
+
+	mailfcb.f_fd = open(filename,0);
+	if (mailfcb.f_fd < 0)
+		goto badfile;
+
+	mailfcb.f_count = 0;
+	mailfcb.f_buf = mailbuf;
+	p = getline(&mailfcb);
+	if (p == 0) goto badfile;
+
+	s = hostname;
+	while(*p != ':') if ((*s++ = *p++) == '\000') goto badfile;
+	*s++ = '\000';
+	p++;
+
+	s = &mailcomd[5];
+	while(*p != ':') if ((*s++ = *p++) == '\000') goto badfile;
+	*s++ = '\000';
+	p++;
+	
+	s = returnto;
+	if (*p == ':')
+		*s = '\0';
+	else {  while(*p != ':') if ((*s++ = *p++) == '\000') goto badfile;
+		for(p = "/.mail"; *s++ = *p++;);
+	}
+
+	return(true);
+
+badfile:
+	log("File %s in illegal format -- deleted\n", filename);
+	unlink(filename);
+	goto loop;
+}
+/* name:
+	ship_it_off
+
+function:
+	To carry out the protocol to mail off a file over the network
+
+algorithm:
+	Connect to the forign host
+	Await a ready command
+	send the mail command
+	Await the send your mail response.
+	send the mail
+	Await the confirmation.
+	Delete the file if the transmission was successful.
+	If there was a permanent failure, put the file in the sender's
+	 root with an explanatory message.
+
+parameters:
+
+returns:
+
+globals:
+	hostname	contains name of foreign host
+	mailcomd	contains a mail command with all appt names
+	netfcb		file descriptor of network file
+	filename	name of the current file
+	returnto	sender's mailbox (if return is necessary);
+	badhost
+
+calls:
+	getline
+	writef
+	reply
+	open	sys
+	close	sys
+	getline
+
+called by:
+	main
+
+history:
+	Initial coding by Mark Kampe  12/27/75
+	Modified by Greg Noel 7/24/78 to maintain connection if destination
+	    host does not change
+
+ */
+ship_it_off()
+{
+	extern char *hnconv();
+	int hnum;
+	register char *p;
+	register int i;
+	register int rtnfd;
+	int timeproc;
+
+	netfcb.f_count = 0;
+	openparam.o_fskt[1] = 3;
+	openparam.o_timo = 60;
+	if ((hnum=atoi(hnconv(hostname))) <= 0) /***/
+	{	log("Mail in %s for %s at %s\n",
+			filename, &mailcomd[5], hostname); /***/
+		p = "Destination host is unknown.";
+		goto fail;
+	}
+
+	if (badhost[hnum])
+		goto nogood;
+
+	log("Mail in %s for %s at %s\n", filename, &mailcomd[5], hostname);
+
+	if ((openparam.o_host&0377) != hnum) {
+		closenet();
+		openparam.o_host = hnum;
+		set_alarm(120);
+		netfcb.f_fd = open("/dev/net/anyhost",&openparam);
+		alarm(0);
+		if (netfcb.f_fd <= 0)
+		{	log("Unable to open connection\n");
+			badhost[hnum] = ntbypass; /* number of times to bypass */
+			goto nogood;
+		}
+		netfcb.f_count = 0;
+		netfcb.f_buf = netbuf;
+
+		do {	p = getline(&netfcb);
+			if (p == 0) goto tempfail;
+			i = reply(p);
+			if (i >= 400) goto tempfail;
+		} while(i != 300);
+	}
+
+	i = writef(netfcb.f_fd,mailcomd);
+	if (i < 0) goto tempfail;
+	i = writef(netfcb.f_fd,"\r\n");
+	if (i < 0) goto tempfail;
+	i = 0;
+	while(i != 350)
+	{	p = getline(&netfcb);
+		if (p == 0) goto tempfail;
+		i = reply(p);
+		if (i == 951) continue;		/* Mail will be forwarded... */
+		if (i == 504)
+			switch (loginfirst())
+			{	case -1: goto fail;
+				case 0:  goto tempfail;
+				case 1:  continue;
+			};
+		if (i >= 500) goto fail;
+		if (i == 450) goto fail;	/* User unknown */
+		if (i > 400) goto tempfail;
+		if (i == 400) goto fail;	/* Service not implemented */
+		if (i == 331) goto fail;	/* Need account parameter */
+	}
+
+	while(p = getline(&mailfcb)) {
+		i = writef(netfcb.f_fd,p);
+		if (i < 0) goto tempfail;
+		i = writef(netfcb.f_fd,"\r\n");
+		if (i < 0) goto tempfail;
+	}
+
+	i = writef(netfcb.f_fd, ".\r\n");
+	if (i < 0) goto tempfail;
+
+	i = 0;
+	while(i != 256)
+	{	p = getline(&netfcb);
+		if (p == 0) goto tempfail;
+		i = reply(p);
+		if (i >= 500) goto fail;
+		if (i > 400) goto tempfail;
+		if (i > 300) goto fail;
+	}
+
+	close(mailfcb.f_fd);
+	unlink(filename);
+	return(true);
+
+fail:
+	log("Unrecoverable error; mail returned to sender\n");
+	/* now return the message to the sender */
+	if (returnto  &&
+	       (   ((rtnfd=open(returnto,1))     >= 0) ||
+		   ((rtnfd=creat(returnto,0666)) >= 0)   )   )
+	{	seek(rtnfd,0,2);
+		writef(rtnfd,"From: mailer\n");
+		writef(rtnfd,"Subject: Undeliverable mail\n\n");
+		writef(rtnfd, "Mail for "); writef(rtnfd, &mailcomd[5]);
+		writef(rtnfd, " at "); writef(rtnfd, hostname);
+		writef(rtnfd, " undeliverable because:\n\t");
+		writef(rtnfd,p);
+		writef(rtnfd,"\n------- Unsent message is below -------\n\n");
+		seek(mailfcb.f_fd,0,0);
+		mailbuf[0] = 0;
+		while(mailbuf[0] != '\n') read(mailfcb.f_fd,mailbuf,1);
+		while((i = read(mailfcb.f_fd,mailbuf,512)) > 0)
+			write(rtnfd,mailbuf,i);
+		close(rtnfd);
+	}
+	unlink(filename);
+tempfail:
+	closenet();
+nogood:
+	close(mailfcb.f_fd);
+	return(false);
+}
+
+closenet()
+{
+	openparam.o_host = 0;
+	if(netfcb.f_fd < 0) return;	/* not currently open */
+	writef(netfcb.f_fd,"BYE\r\n");
+	getline(&netfcb);	/* keep NCP happy until 'flush user' fixed */
+	close(netfcb.f_fd);
+	netfcb.f_fd = -1;
+}
+
+timeout()
+{	timoutflg++;
+	wait();		/* get rid of zombie */
+	reset();	/* return to ship_it_off */
+}
+
+/* name:
+	getline
+
+function:
+	To retrieve one "line" from the file on the specified descriptor.
+
+algorithm:
+	Ignore carriage returns.
+	While the next character is not a new line, stash it in linebuf;
+	null terminate the string in linebuf;
+	return a pointer to linebuf;
+
+	If we should reach end of file and have a line started, terminate
+		it and return.  If no line is started, return a zero.
+
+parameters:
+	*fcb	file control block for the file in question.
+
+returns:
+	*char	pointer to a null terminated string.
+	or a zero indicating end of file.
+
+globals:
+	linebuf		destination of read
+
+calls:
+	read	(sys)
+
+called by:
+	get_next_file
+	ship_it_off
+
+history:
+	Initial coding by Mark Kampe 12/27/75
+
+ */
+getline(afcb)
+ struct fcb *afcb;
+{	register int count;
+	register char *nextin;
+	register char *nextout;
+	char lastchar;
+
+	count = afcb->f_count;
+	nextin = afcb->f_ptr;
+	nextout = linebuf;
+	lastchar = '\000';
+
+	while(lastchar != '\n') {
+		if (count <= 0) {
+			set_alarm(60);
+			count = read(afcb->f_fd,afcb->f_buf,512);
+			alarm(0);
+			if (count <= 0) 
+			{	count = -1;
+				nextin = "\n";
+			}
+			else nextin = afcb->f_buf;
+		}
+		count--;
+		lastchar = *nextin++;
+		if(nextout < &linebuf[sizeof linebuf])
+			*nextout++ = lastchar;
+		if (lastchar == '\r') nextout--;
+	}
+	afcb->f_count = count;
+	afcb->f_ptr = nextin;
+	*--nextout = '\000';
+	if (nextout == linebuf)
+		if (count < 0) return(0);
+	if (nextout == &linebuf[1] && linebuf[0] == '.') {
+		*nextout++ = ' ';
+		*nextout = '\0';
+	}
+	return(linebuf);
+}
+/* name:
+	writef
+
+function:
+	To write a null terminated string out to the specified file descriptor.
+
+algorithm:
+	Find the length of the string.
+	Write it out .
+
+parameters:
+	int	file descriptor
+	*char	address of string to be written.
+
+returns:
+	int	value returned by write.
+
+globals:
+
+calls:
+	write	(sys)
+
+called by:
+	ship_it_off
+
+history:
+	Initial coding by Mark Kampe 12/27/75
+
+ */
+writef(afd,as)
+ int afd;
+ char *as;
+{	register char *s;
+	register int i;
+	register int j;
+
+	i = 0;
+	for(s = as; *s++; i++);
+	if(i == 0) return 0;
+	set_alarm(60);
+	j = write(afd, as, i);
+	alarm(0);
+	if (j != i)	/* did error occur? */
+	{	log("write(%d,0%o,%d) returned %d.\n",afd,as,i,j);
+		log("line was '%s'.\n", as);
+	}
+	return(j);
+}
+/* name:
+	reply
+
+function:
+	To find the reply number from a network message.
+
+algorithm:
+	Convert the first three characters into an integer.
+	If any are non numeric, return a zero.
+
+parameters:
+	*char	pointer to the string in question (null terminated)
+
+returns:
+	int
+
+globals:
+
+calls:
+
+called by:
+	ship_it_off
+
+history:
+	Initial coding by Mark Kampe 12/27/75
+
+ */
+reply(ap)
+ char *ap;
+{	register char c;
+	int i;
+	register int j;
+	register char *s;
+
+	s = ap;
+	log("%s\n",s);
+
+	while((*s<'0') || (*s>'9')) if (*s++ == '\000') return(0);	/* fuckers at multics */
+
+	j = 0;
+	for(i = 3; i; i--)
+	{	c = *s++;
+		if ((c < '0') || (c > '9')) return(0);
+		j =* 10;
+		j =+ c;
+		j =- '0';
+	}
+	return(j);
+}
+/* name:
+	loginfirst
+
+function:
+	to login to a bastard host who insists on it
+
+algorithm:
+	send a "user NETML\npassNETML\n";
+	wait for the 330 230
+	resend the mail command
+
+	if a transmission failure return 0
+	if a bad reply return -1
+	else return 1
+
+parameters:
+
+returns:
+	-1	permanent failure
+	0	temperary failure
+	1	success
+
+globals:
+	netfcb
+	mailcomd
+
+calls:
+	getline
+	reply
+	writef
+
+called by:
+	ship_it_off
+
+history:
+	Designed and coded by a disgruntled Mark Kampe 1/5/76
+
+ */
+loginfirst()
+{	register int i;
+	register char *p;
+
+	i = writef(netfcb.f_fd,"USER NETML\r\n");
+	if (i<=0) return(0);
+
+	i = 0;
+	while(i != 330)
+	{	p = getline(&netfcb);
+		if (p == 0) return(0);
+		i = reply(p);
+		if (i == 230) goto gotin;
+		if (i >= 400) return(-1);
+	};
+
+	i = writef(netfcb.f_fd, "PASS NETML\r\n");
+	if (i <= 0) return(0);
+	i = 0;
+	while(i != 230)
+	{	p = getline(&netfcb);
+		if (p == 0) return(0);
+		i = reply(p);
+		if (i >= 400) return(-1);
+	}
+
+	gotin:
+	i = writef(netfcb.f_fd, mailcomd);
+	if (i<=0) return(0);
+	i = writef(netfcb.f_fd, "\r\n");
+	if (i <= 0) return(0);
+
+	return(1);
+}
+/*
+name:
+	set_alarm, ring
+
+function:
+	to terminate an operation if the remote host is too slugish.
+
+algorithm:
+	set an alarm for the specified period.
+	when the alarm occurs, just return -- the interrupted system call
+	    will return -1.
+
+parameters:
+	the number of seconds to wait
+
+returns:
+	yes
+
+globals:
+	none.
+
+calls:
+	alarm	(sys)
+	signal	(sys)
+	log
+
+called by:
+	several people.
+
+history:
+	coded 6Mar79 by Greg Noel
+*/
+set_alarm(v)
+int v;
+{
+	int ring();
+
+	signal(14, &ring);
+	alarm(v);
+}
+ring()
+{
+	log("Timeout\n");
+}
+<File 1>
+ dmr/rl.c
+4123
+#
+
+/*
+ * RL01 disk driver
+ *
+ * Tom Ferrin - 19 July 78
+ * UCSF Computer Graphics Laboratory
+ *
+ * This driver has now been running for several weeks on a dual drive 11/60.
+ * It doesn't minimize seek scheduling & totally ignores DEC's bad block table.
+ */
+
+#include "param.h"
+#include "buf.h"
+#include "conf.h"
+#include "user.h"
+
+#ifndef NRL
+#define	NRL	4
+#endif not NRL
+#ifndef RLADDR
+#define	RLADDR	0174400
+#endif not RLADDR
+#define	NRLBLK	10220	/* block = 2 sectors = 512 bytes, last track reserved */
+
+#define HNF	010000
+#define OPI	02000
+#define	CRDY	0200
+#define	IENABLE	0100
+#define RCOM	014
+#define WCOM	012
+#define RHCOM	010
+#define SCOM	06
+#define GSCOM	04
+#define DRST	010
+#define DSDIR	04
+#define DSTAT	02
+#define DMARK	01
+#define VC	01000
+
+#define rlexec(a,b) dp->rlcs=((a)<<8)|(b); while((dp->rlcs&CRDY)==0)
+
+struct {
+	int rlcs;
+	int rlba;
+	int rlda;
+	int rlmp;
+};
+
+struct {
+	char openf;	/* open flag */
+	int cyltrk;	/* current cylinder & head select */
+} rl01[NRL];
+
+struct	devtab	rltab;
+struct	buf	rrlbuf;
+
+rlopen(dev, flag)
+{
+	register int unit, *dp, i;
+
+	if (rl01[unit=dev.d_minor].openf == 0) {
+		dp = RLADDR;
+		spl5();
+		dp->rlda = DRST|DSTAT|DMARK;
+		rlexec(unit, GSCOM);
+		rlexec(unit, RHCOM);
+		i = dp->rlcs;
+		spl0();
+		if (i < 0) {
+			u.u_error = EIO;
+			return;
+		}
+		rl01[unit].cyltrk = dp->rlmp & ~077;
+		rl01[unit].openf++;
+	}
+}
+
+rlstrategy(abp)
+struct buf *abp;
+{
+	register struct buf *bp;
+	register int i;
+
+	bp = abp;
+	if (bp->b_flags&B_PHYS)
+		mapalloc(bp);
+	if (bp->b_dev.d_minor >= NRL || (i=bp->b_blkno) >= NRLBLK) {
+		u.u_error = ENXIO;
+		bp->b_flags =| B_ERROR;
+		iodone(bp);
+		return;
+	}
+	bp->av_back = (i/20)<<6 | (i%20)<<1;	/* desired address */
+	bp->av_forw = 0;
+	spl5();
+	if (rltab.d_actf==0)
+		rltab.d_actf = bp;
+	else
+		rltab.d_actl->av_forw = bp;
+	rltab.d_actl = bp;
+	if (rltab.d_active==0)
+		rltran();
+	spl0();
+}
+
+rltran()
+{
+	register struct buf *bp;
+	register int i;
+
+	if ((bp=rltab.d_actf) == 0)
+		return;
+	i = bp->av_back;
+	i = (40-(i&077))*128;	/* words left on track */
+	if (i >= -bp->b_wcount)
+		bp->b_resid = 0;
+	else {
+		bp->b_resid = bp->b_wcount+i; /* words left for next transfer */
+		bp->b_wcount = -i;
+	}
+	rlstart();
+}
+
+rlstart()
+{
+	register struct buf *bp;
+	register int da, *dp;
+	int unit, ca, rda;
+
+	rltab.d_active++;
+	bp = rltab.d_actf;
+	unit = bp->b_dev.d_minor;
+	da = bp->av_back;
+	dp = &rl01[unit].cyltrk;
+	if ((da&~077) != *dp) {
+		ca = *dp & ~100;
+		*dp = da & ~077;
+		dp = RLADDR;
+		rda = da & ~0177;
+		da = (da&0100)>>2;
+		if ((ca =- rda) < 0)
+			ca = -ca|DSDIR;
+		dp->rlda = da|ca|DMARK;
+		rlexec(unit, SCOM);
+	}
+	dp = &RLADDR->rlmp;
+	*dp = bp->b_wcount;
+	*--dp = bp->av_back;
+	*--dp = bp->b_addr;
+	da = (bp->b_xmem&03)<<4 | unit<<8 | IENABLE;
+	if (bp->b_flags&B_READ)
+		da =| RCOM;
+	else
+		da =| WCOM;
+	*--dp = da;
+}
+
+rlintr()
+{
+	register struct buf *bp;
+	register int *dp, i;
+	int n[2];
+
+	if (rltab.d_active == 0)
+		return;
+	bp = rltab.d_actf;
+	rltab.d_active = 0;
+	if ((dp=RLADDR)->rlcs < 0) {	/* error bit */
+		n[0] = dp->rlcs;
+		i = bp->b_dev.d_minor;
+		dp->rlda = DSTAT|DMARK;
+		rlexec(i, GSCOM);
+		n[1] = dp->rlmp;
+		deverror(bp, n[0], n[1]);
+		dp->rlda = DRST|DSTAT|DMARK;
+		rlexec(i, GSCOM);
+		if ((n[0]&(HNF|OPI))==(HNF|OPI) || (n[1]&VC)) {
+			rlexec(i, RHCOM);
+			if (dp->rlcs < 0)
+				goto abort;
+			rl01[i].cyltrk = dp->rlmp & ~077;
+		}
+		if (++rltab.d_errcnt <= 10) {
+			rlstart();
+			return;
+		}
+	  abort:
+		bp->b_flags =| B_ERROR;
+		bp->b_resid = 0;
+	}
+	rltab.d_errcnt = 0;
+	if (bp->b_resid) {
+		n[0] = bp->b_xmem;	/* more of previous transfer */
+		n[1] = bp->b_addr;
+		dpadd(n, -bp->b_wcount<<1);
+		bp->b_xmem = n[0];
+		bp->b_addr = n[1];
+		bp->b_wcount = bp->b_resid;
+		i = bp->av_back;
+		bp->av_back = (i&~077) + 0100;
+	} else {
+		rltab.d_actf = bp->av_forw;
+		iodone(bp);
+	}
+	rltran();
+}
+
+rlread(dev)
+{
+
+	physio(rlstrategy, &rrlbuf, dev, B_READ);
+}
+
+rlwrite(dev)
+{
+
+	physio(rlstrategy, &rrlbuf, dev, B_WRITE);
+}
+<File 1>
+ dmr/tm.c
+6249
+#
+/*
+ */
+
+/*
+ * TM tape driver
+ */
+
+#include "param.h"
+#include "buf.h"
+#include "conf.h"
+#include "user.h"
+
+struct {
+	int tmer;
+	int tmcs;
+	int tmbc;
+	int tmba;
+	int tmdb;
+	int tmrd;
+};
+
+struct	devtab	tmtab;
+struct	buf	rtmbuf;
+
+#ifdef NOSC	/* extra flag in rtmbuf.b_flags to handle odd-length writes */
+#define B_ODDLEN 0100000
+#endif NOSC
+#define B_SCOM	 0040000
+
+char	t_openf[8];
+#define TMopen	0001
+#define TMeof	0002	/* last read an EOF */
+#define TMflush	0004	/* purge all I/O to this device */
+char	*t_blkno[8];
+char	*t_nxrec[8];
+
+#define	TMADDR	0172520
+
+#define NOREW	020
+
+#define	GO	01
+#define NOCMD	000
+#define	RCOM	002
+#define	WCOM	004
+#define	WEOF	006
+#define	SFORW	010
+#define	SREV	012
+#define	WIRG	014
+#define	REW	016
+#define	DENS	060000		/* 9-channel */
+#define	IENABLE	0100
+#define	CRDY	0200
+#define GAPSD	010000
+#define	TUR	1
+#define	HARD	0102200	/* ILC, EOT, NXM */
+#define	EOF	0040000
+
+#define	SSEEK	1
+#define	SIO	2
+#define SCOM	3
+
+tmopen(dev, flag)
+{
+	register dminor;
+
+	dminor = dev.d_minor&07;
+	if (t_openf[dminor])
+		u.u_error = ENXIO;
+	else {
+		t_openf[dminor] = TMopen;
+		t_blkno[dminor] = 0;
+		t_nxrec[dminor] = 65535;
+	}
+}
+
+tmclose(adev, flag)
+{
+	register int dminor, dev;
+
+	dev = adev;
+	dminor = dev.d_minor&07;
+	if (flag) {
+		tcommand(dev, WEOF);
+		tcommand(dev, WEOF);
+		tcommand(dev, dev&NOREW ? SREV : REW);
+	} else {
+		if((dev&NOREW)==0)
+			tcommand(dev, REW);
+		else if((t_openf[dminor] & TMeof) == 0)
+			tcommand(dev, SFORW);
+	}
+	t_openf[dminor] = 0;
+}
+
+tcommand(dev, com)
+{
+	register struct buf *bp;
+
+	bp = &rtmbuf;
+	spl6();
+	while(bp->b_flags & B_BUSY) {
+		bp->b_flags =| B_WANTED;
+		sleep(bp, PRIBIO);
+	}
+	spl0();
+	bp->b_dev = dev;
+	bp->b_resid = com;
+	bp->b_blkno = 0;
+	bp->b_flags = B_SCOM | B_BUSY | B_READ;
+	tmqup(bp);
+	iowait(bp);
+	if(bp->b_flags & B_WANTED)
+		wakeup(bp);
+	bp->b_flags = 0;
+	return(bp->b_resid);
+}
+
+tmstrategy(abp)
+struct buf *abp;
+{
+	register struct buf *bp;
+	register char **p;
+
+	bp = abp;
+	if(bp->b_flags&B_PHYS)
+		mapalloc(bp);
+	p = &t_nxrec[bp->b_dev.d_minor&07];
+	if (*p <= bp->b_blkno) {
+		if (*p < bp->b_blkno) {
+			bp->b_flags =| B_ERROR;
+			iodone(bp);
+			return;
+		}
+		if (bp->b_flags&B_READ) {
+			clrbuf(bp);
+			iodone(bp);
+			return;
+		}
+	}
+	if ((bp->b_flags&B_READ)==0)
+		*p = bp->b_blkno + 1;
+	tmqup(bp);
+}
+
+tmqup(abp)
+struct buf *abp;
+{
+	register struct buf *bp;
+
+	bp = abp;
+	bp->av_forw = 0;
+	spl5();
+	if (tmtab.d_actf==0)
+		tmtab.d_actf = bp;
+	else
+		tmtab.d_actl->av_forw = bp;
+	tmtab.d_actl = bp;
+	if (tmtab.d_active==0)
+		tmstart();
+	spl0();
+}
+
+tmstart()
+{
+	register struct buf *bp;
+	register int com;
+	int unit;
+	register char *blkno;
+
+    loop:
+	if ((bp = tmtab.d_actf) == 0)
+		return;
+	com = ((bp->b_dev.d_minor&~NOREW)<<8) | ((bp->b_xmem & 03) << 4);
+	if(bp->b_flags&B_SCOM) {
+		if(bp->b_resid == NOCMD) {
+			/* don't want IENABLE bit or else */
+			/* interrupt will occur immediately */
+			TMADDR->tmcs = com;
+			bp->b_resid = TMADDR->tmer;
+			tmdone();
+			goto loop;
+		}
+		tmtab.d_active = SCOM;
+		TMADDR->tmbc = 1;	/* i.e. infinity, or until eof */
+		TMADDR->tmcs = bp->b_resid | com | IENABLE | GO;
+		return;
+	}
+	unit = bp->b_dev.d_minor&07;
+	if ((t_openf[unit] & TMflush) || (TMADDR->tmcs & CRDY)==0) {
+		bp->b_flags =| B_ERROR;
+		tmdone();
+		goto loop;
+	}
+	t_openf[unit] =& ~TMeof;
+	blkno = t_blkno[unit];
+	if (blkno != bp->b_blkno) {
+		tmtab.d_active = SSEEK;
+		if (blkno < bp->b_blkno) {
+			com =| SFORW|IENABLE|GO;
+			TMADDR->tmbc = blkno - bp->b_blkno;
+		} else {
+			com =| SREV|IENABLE|GO;
+			TMADDR->tmbc = bp->b_blkno - blkno;
+		}
+		TMADDR->tmcs = com;
+		return;
+	}
+	tmtab.d_active = SIO;
+	TMADDR->tmbc = bp->b_wcount << 1;
+#ifdef NOSC
+	if(bp->b_flags & B_ODDLEN) TMADDR->tmbc++;
+#endif NOSC
+	TMADDR->tmba = bp->b_addr;		/* core address */
+	TMADDR->tmcs = com | ((bp->b_flags&B_READ)? RCOM|IENABLE|GO:
+	    ((tmtab.d_errcnt)? WIRG|IENABLE|GO: WCOM|IENABLE|GO));
+}
+
+tmdone()
+{
+	register struct buf *bp;
+
+	bp = tmtab.d_actf;
+	tmtab.d_errcnt = 0;
+	tmtab.d_actf = bp->av_forw;
+	tmtab.d_active = 0;
+	iodone(bp);
+}
+
+tmintr()
+{
+	register struct buf *bp;
+	register int unit;
+
+	if ((bp = tmtab.d_actf)==0)
+		return;
+	unit = bp->b_dev.d_minor&07;
+	/* ignore errors on SCOM */
+	if (tmtab.d_active == SCOM) {
+		bp->b_resid = TMADDR->tmbc -1;	/* return skip count */
+		tmdone();
+		tmstart();
+		return;
+	}
+	if (TMADDR->tmcs < 0) {		/* error bit */
+		while(TMADDR->tmrd & GAPSD) ; /* wait for gap shutdown */
+		if ((TMADDR->tmer&(HARD|EOF))==0 && tmtab.d_active==SIO) {
+			if (++tmtab.d_errcnt < 10) {
+				t_blkno[unit]++;
+				tmtab.d_active = 0;
+				tmstart();
+				return;
+			}
+/*
+			deverror(bp, TMADDR->tmer, 0);
+ */
+		} else if (TMADDR->tmer&EOF) {
+			t_openf[unit] =| TMeof;
+			if (bp != &rtmbuf)	/* flush future I/O on */
+				t_openf[unit] =| TMflush; /* cooked device */
+			bp->b_resid = bp->b_wcount << 1;
+			tmdone();
+			tmstart();
+			return;
+		}
+/*
+		else	deverror(bp, TMADDR->tmer, 0);
+ */
+		bp->b_flags =| B_ERROR;
+		tmtab.d_active = SIO;
+	}
+	if (tmtab.d_active == SIO) {
+		t_blkno[unit]++;
+		bp->b_resid = TMADDR->tmbc;
+		tmdone();
+	} else
+		t_blkno[unit] = bp->b_blkno;
+	tmstart();
+}
+#ifndef NOSC
+tmread(dev)
+{
+	tmphys(dev);
+	physio(tmstrategy, &rtmbuf, dev, B_READ);
+	u.u_count = -rtmbuf.b_resid;
+}
+
+tmwrite(dev)
+{
+	tmphys(dev);
+	physio(tmstrategy, &rtmbuf, dev, B_WRITE);
+	u.u_count = 0;
+}
+
+tmphys(dev)
+{
+	register unit, a;
+
+	unit = dev.d_minor&07;
+	a = lshift(u.u_offset, -9);
+	t_blkno[unit] = a;
+	t_nxrec[unit] = ++a;
+}
+#endif NOSC
+#ifdef NOSC
+		/* Special NOSC code to permit odd-length reads and writes */
+tmread(dev)
+{
+	physio(tmstrategy, &rtmbuf, dev, tmphys(dev)|B_READ);
+	u.u_count = -rtmbuf.b_resid;
+}
+
+tmwrite(dev)
+{
+	physio(tmstrategy, &rtmbuf, dev, tmphys(dev)|B_WRITE);
+	u.u_count = 0;
+}
+
+tmphys(dev)
+{
+	register unit, a;
+
+	unit = dev.d_minor&07;
+	a = lshift(u.u_offset, -9);
+	t_blkno[unit] = a;
+	t_nxrec[unit] = ++a;
+	if(u.u_count & 01) {
+		u.u_count++;
+		return (B_ODDLEN);
+	}
+	return 0;
+}
+#endif NOSC
+<File 1>
+ dmr/dz.c
+15304
+#
+/*
+module name:
+	dz.c
+
+function:
+	Device driver for the DEC dz11 8 line asynchronous multiplexor
+
+globals containied:
+	dz11	array of tty structures for the dz11 lines
+	dzaddrs	array of addresses of the various dz11 controllers
+	dzmodem	array specifying which dz ports have modem control
+	dzcycling	whether or not modem control is cycling
+
+routines contained:
+	dzopen		open system call routine
+	dzclose		close system call routine
+	dzread		read system call routine
+	dzwrite         write system call routine
+	dzrint          receive interrupt routine
+	dzxint          transmit interrupt routine
+	dzstart         I/O startup routine
+	dzsgtty         sgtty system call routine
+	dzparam         hardare parameter setting routine
+	dzstatus	modem control cycling routine
+
+routines referenced:
+	ttread, ttwrite, ttyinput, ttystty, ttrstrt
+	sleep, wakeup
+	timeout
+	issig, psig
+
+modules referenced:
+	user.h          needed because of the error code definitions
+	param.h         contains constants required by user.h
+	conf.h          contains the device structure definition
+	tty.h           contains definition of tty structure
+	options.h       to get system compile time parameters
+
+compile time parameters:
+	UCLATTY         define this if you are using the ucla tty.c
+			leave this undefined if you are using the standard one
+
+history:
+	Designed and coded by Mark Kampe, 9/27/77.
+*/
+#include "param.h"
+#include "conf.h"
+#include "user.h"
+#include "tty.h"
+
+#define true    0177777
+#define false   0000000
+#define then    /* */
+
+#ifndef NDZ11
+#define NDZ11   8		/* default number of DZ lines */
+#endif not NDZ11
+#ifndef DZADDRS
+#define DZADDRS 0760100		/* default address of dz registers */
+#endif not DZADDRS
+#ifndef DZMODEM
+#define DZMODEM	1, 1, 1, 1, 1, 1, 1, 1	/* default modem control enable */
+#endif not DZMODEM
+#define DZRATE	5*HZ		/* sample modem status every 5 seconds */
+
+struct  tty     dz11[ NDZ11 ];
+
+struct  dzregs          /* the readable DZ11 registers          */
+{       int     dzcsr;          /* control status register      */
+	int     dzrcv;          /* receive buffer register      */
+	int     dztcr;          /* transmit control register    */
+	int     dzmsr;          /* modem status register        */
+};
+
+struct                  /* the writeable DZ11 registers         */
+{       int     dzcsr;          /* control status register      */
+	int     dzlpr;          /* line parameter register      */
+	int     dztcr;          /* transmit control register    */
+	int     dztdr;          /* transmit data register       */
+};
+
+struct  dzregs  *dzaddrs[] { DZADDRS };	/* addresses of DZ registers */
+
+/* specification of which lines have modem control enabled */
+char    dzmodem[ NDZ11 ]                /* Setting the i'th entry to a 1  */
+{	DZMODEM		};		/* enables modem control on that  */
+					/* line.  Although this array is  */
+					/* statically initialized, it can */
+					/* be changed dynamically.        */
+
+int dzcycling;			/* whether or not the dz has a modem test
+				   pending on any modem controlled lines */
+extern	ttrstrt();
+int	dzstart();
+
+char speedmap[ 16 ]             /* map a Unix speed into a DZ11 equivalent */
+{       000,                    /* 0 baud */
+	000,                    /* 50 baud */
+	001,                    /* 75 baud */
+	002,                    /* 110 baud */
+	003,                    /* 134.5 baud */
+	004,                    /* 150 baud */
+	000,                    /* dz doesn't support 200 baud */
+	005,                    /* 300 baud */
+	006,                    /* 600 baud */
+	007,                    /* 1200 baud */
+	010,                    /* 1800 baud */
+	012,                    /* 2400 baud */
+	014,                    /* 4800 baud */
+	016,                    /* 9600 baud */
+	000,                    /* external 1 not supported */
+	000                     /* external 2 not supported */
+};
+
+
+/* definitions for bits in the DZ11 registers */
+#define MUXCLR  0000020         /* clear multiplexer    in csr  */
+#define SCENABL 0000040         /* scan enable          in csr  */
+#define IENABLE 0040100         /* xmt & rcv interrupts in csr  */
+#define RINT    0000200         /* receive done bit     in csr  */
+#define XINT    0100000         /* transmit done bit    in csr  */
+#define LINENUM 0003400         /* line # mask    in rcv & csr  */
+#define PERROR  0010000         /* parity error         in rcv  */
+#define FRERROR 0020000         /* framing error        in rcv  */
+#define OVERRUN 0040000         /* data over run        in rcv  */
+#define BITS_6  0000010         /* six bit characters   in lpr  */
+#define BITS_7  0000020         /* seven bit characters in lpr  */
+#define BITS_8  0000030         /* eight bit characters in lpr  */
+#define ONE_SB  0000000         /* one stop bit         in lpr  */
+#define TWO_SB  0000040         /* two stop bits        in lpr  */
+#define PENABLE 0000100         /* parity enabled       in lpr  */
+#define OPAR    0000200         /* odd parity selected  in lpr  */
+#define SSPEED  0000007         /* unix notation for 300 baud   */
+#define RCV_ON  0010000         /* receiver enable      in lpr  */
+#define DEFAULT 0012470         /* initial parameters for  lpr  */
+
+/* name:
+	dzopen  and dzclose
+
+function:
+	open system call routine for the dz11
+	close system call routine for the dz11
+
+algorithm:
+open:
+	validate the device unit number
+	get the controller address
+	if the line isn't already open
+		initialize the hardware
+		if modem control is enabled on that line
+			wait for the line to come up
+		initialize the software parameters
+	call ttyopen on it
+
+close:
+	flush any pending output
+	mark the line closed
+	disable further input from that line
+
+parameters:
+	device designation      (major and minor numbers)
+	flag                    (whether or not write access is desired)
+
+returns:
+	a setting of u.u_error if it fails
+
+globals:
+	dz11            tty tables for the dz11 lines
+	dzaddrs         pointer to the registers
+	dzmodem
+	dzcycling
+
+calls:
+	ttyopen         to complete the opening operation
+	wflushtty       to flush the queues
+	dzparam         to set the initial parameters
+	dzstatus	to start modem status cycling
+
+called by:
+	openi through cdevsw
+*/
+dzopen( dev , flag )
+ int dev, flag;
+{       register struct dzregs *dzp;
+	register struct tty *tp;
+	register int unit;
+
+	unit = dev.d_minor;
+	if (unit >= NDZ11)
+		then    return( u.u_error = ENXIO );
+
+	dzp = dzaddrs[ (unit >> 3) ];
+	tp = &dz11[ unit ];
+	unit =& 7;
+
+	if ((tp->t_state & ISOPEN) == 0) then
+	{       dzp->dztcr =| (0400 << unit);
+		dzp->dzcsr =| (SCENABL|IENABLE);
+
+		if ( dzmodem[dev.d_minor] ) then
+		{       spl5();
+			dzp->dzlpr = unit|DEFAULT;
+			tp->t_state = WOPEN;
+			if (~dzcycling)
+				then	dzstatus();
+			while((tp->t_state & CARR_ON) == 0)
+			{       sleep( tp, TTIPRI );
+				if (issig()) then
+				{       spl0();
+					psig();
+					return;
+				}
+			}
+			spl0();
+		}
+
+		tp->t_state =| SSTART|CARR_ON;
+		tp->t_flags = XTABS|ECHO|CRMOD|EVENP|ODDP;
+		tp->t_erase = CERASE;
+		tp->t_kill = CKILL;
+		tp->t_speeds = SSPEED | (SSPEED << 8);
+		tp->t_addr = dzstart;
+
+		dzparam( dev.d_minor );
+	}
+
+	ttyopen( dev, tp );
+}
+
+
+dzclose( dev, flag )
+ int dev, flag;
+{       register struct tty *tp;
+	register int unit;
+	register struct dzregs *dzp;
+
+	unit = dev.d_minor;
+	tp = &dz11[ unit ];
+	dzp = dzaddrs[ unit >> 3 ];
+
+	wflushtty( tp );
+
+	tp->t_state = 0;
+	unit =& 7;
+	dzp->dzlpr = unit;
+	dzp->dztcr =& ~(0400 << unit);
+}
+/* name:
+	dzread and dzwrite
+
+function:
+	read system call routine for the dz11
+	write system call routine for the dz11
+
+algorithm:
+	convert the minor device designation into a pointer to a tty struct
+	call the appropriate device independent routine
+
+parameters:
+	major and minor device designations
+
+globals:
+	dz11
+
+calls:
+	ttread
+	ttwrite
+
+called by:
+	readi and writei through the cdevsw
+*/
+
+dzread( dev )
+ int dev;
+{       register int unit;
+	register struct tty *tp;
+
+	unit = dev.d_minor;
+	tp = &dz11[ unit ];
+	ttread( tp );
+}
+
+dzwrite( dev )
+ int dev;
+{       register int unit;
+	register struct tty *tp;
+
+	unit = dev.d_minor;
+	tp = &dz11[ unit ];
+	ttwrite( tp );
+}
+/* name:
+	dzrint
+
+function:
+	receive interrupt handling routine for the dz11
+
+algorithm:
+	get a pointer to the registers for the interrupting dz11
+	while there is data in the silo
+		get the next character
+		if from an illegal line,
+			continue
+		if a framing error
+			say the character was a null
+		call ttyinput with the character
+
+parameters:
+	dz11 controller number of the interrupting unit
+
+globals:
+	dz11    tty structures for the dz11 lines
+	dzaddrs address of dz11 controllers
+
+calls:
+	ttyinput        to process the received characters
+
+called by:
+	trap
+*/
+dzrint( unit )
+ int unit;
+{       register struct dzregs *dzp;
+	register struct tty *tp;
+	register int c;
+	int lineno;
+
+	dzp = dzaddrs[ unit ];
+	unit =<< 3;
+
+	while((c = dzp->dzrcv) < 0)
+	{       lineno = ((c & LINENUM) >> 8) + unit;
+		if (lineno >= NDZ11)
+			then    continue;
+
+		tp = &dz11[ lineno ];
+
+		if (c & PERROR)
+			then    continue;
+
+		if (c & FRERROR)
+			then    c = 0;
+			else    c =& 0377;
+
+		if (tp->t_state & ISOPEN)
+			then    ttyinput( c , tp );
+			else    wakeup( tp );
+	}
+}
+/* name:
+	dzxint
+
+function:
+	dz11 transmit interrupt routine
+
+algorithm:
+	get a pointer to the controller that interrupted
+	while the dj thinks that I am done with some line
+		get the line number
+		get the associated tty structure
+		if it is timed out, or done disable this line
+		get the next character
+		if it is a delay indication, schedule the restart
+			and disable this line
+		else set the character up for output
+		if there is a sleeping writer and the queue has drained some
+			wake him up
+
+parameters:
+	the controller number for the dz11 that interrupted
+
+globals:
+	dz11    pointers to the teletype structures for the dz11 lines
+	dzaddrs pointers to the dz11 controllers
+
+calls:
+	wakeup
+	timeout
+
+called by:
+	trap
+*/
+dzxint( unit )
+ int unit;
+{       register struct dzregs *dzp;
+	register struct tty *tp;
+	register int lineno;
+	int  c;
+
+	dzp = dzaddrs[ unit ];
+	unit =<< 3;
+	while( dzp->dzcsr&XINT )
+	{       lineno = (dzp->dzcsr&LINENUM) >> 8;
+		tp = &dz11[ lineno + unit ];
+
+		if ((tp->t_state&TIMEOUT) || ((tp->t_state&ISOPEN) == 0))
+			then goto disable;
+
+		if ((c = getc( &tp->t_outq )) < 0 )
+			then goto disable;
+
+#ifdef  UCLATTY
+		if (c == CESCAPE)
+			then c = getc( &tp->t_outq );
+			else
+#endif
+		if (c & 0200)   then
+		{       tp->t_state =| TIMEOUT;
+			if (c =& 0177)
+				then timeout( ttrstrt, tp, c&0177 );
+#ifdef  UCLATTY
+				else tp->t_state =| STOPOUT;
+#endif
+				goto disable;
+		}
+
+		dzp->dztdr = c;
+
+		if ((tp->t_state&ASLEEP) && (tp->t_outq.c_cc <= TTLOWAT)) then
+		{       tp->t_state =& ~ASLEEP;
+			wakeup( &tp->t_outq );
+		}
+		continue;
+
+disable:
+		dzp->dztcr =& ~(1 << lineno);
+	}
+
+	dzp->dzcsr =| IENABLE;
+}
+/* name:
+	dzstart
+
+function:
+	to start an output operation on a dz line
+
+algorithm:
+	if the line is timed out, do nothing
+	else enable it for transmission
+
+parameters:
+	pointer to the tty structure for that line
+
+globals:
+	dzaddrs         pointers to addresses of dz11 controllers
+	dz11            table of tty structures for dz lines
+
+calls:
+	wakeup          to notify a sleeping writer
+	timeout         to schedule resuming output
+
+called by:
+	dzxint          to continue an output operation
+	ttstart         to initiate an output operation
+*/
+
+
+dzstart( atp )
+ struct tty *atp;
+{       register struct dzregs *dzp;
+	register struct tty *tp;
+	register int lineno;
+
+	tp = atp;
+
+	if (tp->t_state&TIMEOUT)
+		then    return;
+
+	lineno = tp - dz11;
+	dzp = dzaddrs[ lineno >> 3 ];
+	lineno =& 7;
+
+	dzp->dztcr =| (1 << lineno);
+}
+/* name:
+	dzsgtty
+
+function:
+	dz11 sgtty system call routine
+
+algorithm:
+	get a pointer to the corresponding tty structure
+	call ttystty
+	if anything changed, call dzparam
+
+parameters:
+	major and minor device designation
+	argument vector pointer
+
+globals:
+	dzaddrs         addresses of dz11 controllers
+
+calls:
+	ttystty         device independent special function routine
+
+called by:
+	sgtty           (throught cdevsw)
+*/
+
+#ifdef  UCLATTY
+dzsgtty( dev )
+ int dev;
+#endif
+#ifndef   UCLATTY
+dzsgtty( dev , v )
+ int dev, *v;
+#endif
+{       register struct tty *tp;
+	register int unit;
+
+	unit = dev.d_minor;
+	tp = &dz11[ unit ];
+
+#ifdef  UCLATTY
+	if (ttystty( tp ))
+#endif
+#ifndef   UCLATTY
+	if (ttystty( tp, v ))
+#endif
+		then    return;
+		else    dzparam( unit );
+}
+/* name:
+	dzparam
+
+function:
+	DZ11 parameter setting routine
+
+algorithm:
+	ascertain what controller the specified unit is on
+	get a pointer to its tty structure
+	if the speed is set to 0, just turn the line off
+	else, compute the parametersd
+	and install them for that line
+
+parameters:
+	DZ unit number
+
+globals:
+	dzaddrs         to get the controller addresses
+	dz11            tty structure for the dz lines
+
+called by:
+	dzopen          to initialize the line for the first time
+	dzsgtty         to change parameters
+*/
+
+dzparam( unit )
+ int unit;
+{       register struct dzregs *dzp;
+	register struct tty *tp;
+	register int parms;
+	int speed;
+
+	dzp = dzaddrs[ unit >> 3 ];
+	tp = &dz11[ unit ];
+	unit =& 7;
+
+	if (tp->t_speeds == 0) then
+	{       dzp->dzlpr = unit;       /* just turn the line off */
+		return;
+	}
+	else
+	{       speed = tp->t_speeds&017;
+		speed = speedmap[ speed ];
+	}
+	parms = unit|RCV_ON;
+	parms =| (speed << 8);
+	if (tp->t_flags & EVENP) then
+		if (tp->t_flags & ODDP)
+			then    parms =| BITS_8;
+			else    parms =| (BITS_7|PENABLE);
+		else    parms =| (BITS_7|OPAR|PENABLE);
+	if (tp->t_speeds.lobyte == 3)
+		then    parms =| TWO_SB;
+
+	dzp->dzlpr = parms;
+}
+/* name:
+	dzstatus
+
+function:
+	to see if the lines with modem control enabled still have the
+	appropriate signals up
+
+algorithm:
+	For all open lines with modem control enabled,
+		if the carrier has dropped, send a hangup to the group
+	if any open lines still have modem control
+		schedule the next call to dzstatus
+	else	turn off dzcycling
+
+parameters:
+	none
+
+globals:
+	dz11
+	dzmodem
+	dzcycling
+
+calls:
+	timeout
+
+called by:
+	timeout
+
+*/
+dzstatus()
+{	register int line;
+	register struct tty *tp;
+	register struct dzregs *dzp;
+	int numlines;
+
+	numlines = 0;
+	for( line = 0; line < NDZ11; line++ )
+	{	dzp = dzaddrs[ line >> 3 ];
+		tp = &dz11[ line ];
+
+		if ((dzmodem[ line ] == 0) || ((tp->t_state&(ISOPEN+WOPEN)) == 0) )
+			then	continue;
+
+		numlines++;
+
+		if (dzp->dzmsr & (0400 << (line&7))) then
+		{	tp->t_state =| CARR_ON;
+			if (tp->t_state&WOPEN)
+				then	wakeup( tp );
+		}
+		else
+		{	tp->t_state =& ~CARR_ON;
+			if (tp->t_state & ISOPEN) 
+				then	signal( tp->t_pgrp, SIGHUP );
+		}
+	}
+
+	if (numlines) then
+	{	timeout( &dzstatus, 0, DZRATE );
+		dzcycling = true;
+	}
+	else	dzcycling = false;
+}
+ 

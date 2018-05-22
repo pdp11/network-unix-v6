@@ -1,0 +1,5 @@
+if -r write rm write
+load -n write subs.a strings.a wait.o -O libg.a libh.a libg.a
+if -r a.out mv a.out write
+:					fini
+

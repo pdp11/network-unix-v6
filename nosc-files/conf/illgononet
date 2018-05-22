@@ -1,0 +1,7 @@
+as data.s  l.s
+ld -x -r -d a.out /sys/conf.cac/m45.o c.o /sys/lib1 /sys/lib2 /sys/lib3-noncp
+nm -ug
+cp a.out x
+syms x >usyms
+/sys/conf.cac/sysfix a.out xs
+echo Ill unix in x, syms in usyms, sysfixed unix in xs

@@ -1,0 +1,10 @@
+alloc.c
+clock.c
+iget.c
+main.c
+nami.c
+nmain.c
+rdwri.c
+subr.c
+sys1.c
+sys3.c

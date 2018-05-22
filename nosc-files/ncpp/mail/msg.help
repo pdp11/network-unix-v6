@@ -1,0 +1,36 @@
+>>>Commands:
+h[eaders]  <msg-sequence>    list one-line header for each message
+t[ype]     <msg-sequence>    list messages on terminal
+n[ext message]               list next message on terminal
+b[ack up]                    list previous message on terminal
+c[urrent message]            list current message number and file name
+d[elete]   <msg-sequence>    mark messages as being deleted
+u[ndelete] <msg-sequence>    remove deleted marking from messages
+s[ave]                       moves undeleted messages to mbox
+q[uit]                       exit without changing any files
+e[exit and overwrite]        save and quit
+l[ist]     <msg-sequence>    copy messages (without separators) to file
+p[ut]      <msg-sequence>    copy messages (with separators) to file
+m[ove]     <msg-sequence>    same as put + delete
+j[ump]                       jump to program - can be any shell command
+r[ead]                       read from new message file
+o[verwrite]                  overwrite and re-read current file
+v[erbose]                    verbose/concise toggle
+a[nswer]                     answer message [not implemented]
+f[orward]                    send copy of message to someone [not implemented]
+w[rite to]                   sets default filename for l,p,m commands
+
+>>>Examples of a <msg-sequence>:
+2                            message 2
+2,3,6  or  2 3 6             messages 2, 3, and 6
+11:15  or 11-15  or  11-5    messages 11 through 15 (inclusive)
+15:11                        messages 15 through 11 (in that order)
+:15                          first message through message 15
+3:                           message 3 through the last message
+101-5,113,116                messages 101 through 105, 113, and 116
+
+>>>The following may be used instead of a <msg-sequence>:
+a[ll messages]
+d[eleted messages]
+u[ndeleted messages]
+i[nverse all messages]

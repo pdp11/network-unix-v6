@@ -1,0 +1,36 @@
+if $1x = x goto bad
+if $2x = x goto bad
+if $3x = x goto bad
+if $3 = yes goto bad
+set A = $1
+set B = $2
+if $B != dvr goto loop
+set B = ncpk/drivers
+: loop
+set D = $A/
+if -r $D$3.c goto compile
+set D = $B/
+if -r $D$3.c goto compile
+set D = /usr/sys/$D
+if -r $D$3.c goto compile
+echo $B/$3.c: module not found
+: fail
+echo Compile failed
+set n = n
+goto next
+: compile
+echo $3: found as $D$3.c
+cc -O -c -L$A:h:$B:/usr/sys/h:/usr/sys/$B:/usr/include $D$3.c
+if ! -r $3.o goto fail
+size $3.o
+ar rv $A/lib $3.o|mc
+rm $3.o
+: next
+shift
+if $3x = x exit
+if $3 != yes goto loop
+if $no = no exit
+loadit $A $4
+exit
+: bad
+echo "useage: install <sys-name-dir> <module-dir> <module-name> ... [yes [suffix]]"

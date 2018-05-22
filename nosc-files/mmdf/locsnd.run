@@ -1,0 +1,6 @@
+load -nt locsnd sndsubs mailsubs tailor \
+	mailib.a \
+	nlibff.a \
+	| tee errlst
+mv a.out locsnd
+cat locsnd.txt

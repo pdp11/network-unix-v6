@@ -1,0 +1,2 @@
+do chown unix remsnd
+do chmod 4777 remsnd
