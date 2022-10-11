@@ -1,0 +1,4 @@
+% ncc -c -O nopcls.c
+%  ld -x -r *.o
+%  mv a.out ../conf/ldncp
+%  

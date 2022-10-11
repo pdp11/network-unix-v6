@@ -1,0 +1,28 @@
+.ls 2
+.nh
+.bl 10
+
+.bl 10
+.ce 2
+\fBINTERPROCESS COMMUNICATION EXTENSIONS
+TO THE UNIX OPERATING SYSTEM
+.bl 4
+.ce
+16 July 1978
+.bp
+.bl 7
+.ce
+CONTENTS
+.nf
+.bl 5
+.ce 3
+Interprocess Communication Extensions
+for the UNIX Operating System:
+II Implementation
+.bl 3
+.ce
+A Standard For UNIX Interprocess Communication
+.bl 3
+.ce
+IPC Specifications\fR
+.bp

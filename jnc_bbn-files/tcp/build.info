@@ -1,0 +1,30 @@
+default: tcp
+
+tcp
+tcp.o psipin.o psipout.o auth.o log.o
+ncc -x -n -O tcp.o psipin.o psipout.o auth.o log.o
+
+tcp.o
+tcp.c tcpstru.h
+ncc -c -O tcp.c
+
+psipin.o
+psipin.c tcpstru.h hdrmasks.h
+ncc -c -O psipin.c
+
+psipout.o
+psipout.c tcpstru.h hdrmasks.h
+ncc -c -O psipout.c
+
+auth.o
+auth.c tcpstru.h
+ncc -c -O auth.c
+
+log.o
+log.c putc.c specfmt.h
+ncc -Oc putc.c
+ncc -Oc log.c
+mv log.o log.only.o
+ld -X -r log.only.o putc.o
+mv a.out log.o
+rm log.only.o

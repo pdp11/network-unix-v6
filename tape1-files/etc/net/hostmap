@@ -1,0 +1,300 @@
+;
+;	This is /etc/net/host_map, documented in host_map(V).
+;	It is the map for network host names and numbers.
+;	Use host(I) to change this file.
+;
+;	Last updated by gurwitz on Wed Jun 10 12:44:09 1981
+;
+;	Networks
+;
+NET  nonet          0    ;  1 known hosts
+NET  bbn-pr         1
+NET  sf-pr-1        2  sf-bay-area-pr-1
+NET  bbn-rcc        3    ;  11 known hosts
+NET  satnet         4  atlantic-satellite  atlantic-satelite
+NET  sill-pr        5  washington-dc-pr
+NET  sf-pr-2        6  sf-bay-area-pr-2
+NET  chaos          7,01    ;  4 known hosts
+NET  clarknet       8  bbn-satnet
+NET  bragg-pr       9  fort-bragg-pr
+NET  arpanet       10  arpa    ;  209 known hosts
+NET  uclnet        11  uc-london
+NET  cyclades      12
+NET  nplnet        13  national-physical-lab
+NET  telenet       14
+NET  epss          15
+NET  datapac       16
+NET  transpac      17
+NET  lcsnet        18  lcs    ;  8 known hosts
+NET  tymnet        19
+NET  dc-pr         20  fort-sill-pr
+NET  edn           21  dcec-edn  edn-dcec    ;  3 known hosts
+NET  dialnet       22,02  dial    ;  4 known hosts
+NET  mitre         23
+NET  bbn-local     24
+NET  rsre-ppsn     25
+NET  autodin-ii    26
+NET  nosc-lccn     27,01    ;  3 known hosts
+NET  wideband      28
+NET  dcn-comsat    29
+NET  dcn-ucl       30
+NET  bbn-sat-test  31
+NET  ucl-cr1       32
+NET  ucl-cr2       33
+NET  accat         34  akkat  
+NET  su-net        36
+;
+;	Hosts
+;
+; Capability values: 01 - TCP host; 02 - NCP host
+;	0 means NCP only
+;
+anyhost             	   0/0,nonet  nonet
+pred-unix           	0/1,bbn-rcc
+smi                 	1/1,bbn-rcc
+bbn-tenexe          	0/5,bbn-rcc  bbne
+bbn-ptip            	2/5,bbn-rcc  ptip
+bbn-tenexa          	3/5,bbn-rcc  bbna  bbn-twenexa
+bbn-tenexb          	0/49,bbn-rcc  bbnb
+bbn-tenexd          	1/49,bbn-rcc  bbnd  bbn-twenexd
+bbn-tenex           	3/49,bbn-rcc  bbn  bbnc  bbn-tenexc
+coins-gw            	3/50,bbn-rcc  gw  cpf
+unix-nps            	0/51,bbn-rcc  bbn-nps
+bbnf                	2/51,bbn-rcc  bbn-f
+lisp-machine-17     	  0401,chaos  cadr-17  cadr17  lm17  lisp-machine-16  cadr-16  cadr16  lm16  lisp-machine-15  cadr-15  cad
+mit-mc              	 01403,chaos  mc  mitmc
+mit-ai              	 02004,chaos  ai  mitai
+mit-xx              	 02405,chaos  xx  mitxx
+ucla-ats             0/1,arpanet  ats
+ucla-ccn             1/1,arpanet  ccn
+ucla-security        2/1,arpanet  insecurity  ucla  ucla-s  ucla-net
+sri-isc              0/2,arpanet  arc-rd  sri-tsc  arc  dngc  dnsri
+sri-kl               1/2,arpanet  aic  sri  sri-ai  kl  nic
+sri-vis11            2/2,arpanet  vis11  sri-cbc11  cbc11
+sri-nsc11            3/2,arpanet  nsc11
+nosc-cc              0/3,arpanet  nuc-cc  nosc-elf  nosc
+nosc-spel            1/3,arpanet  nosc-secure1  nuc-secure
+logicon              2/3,arpanet
+nwc                  3/3,arpanet
+nprdc-unix           4/3,arpanet
+utah-11              0/4,arpanet
+utah-tip             2/4,arpanet
+utah-20              3/4,arpanet  utah
+bbn-tenexe           0/5,arpanet  bbne  bbn-e
+bbn-tenexg           1/5,arpanet  bbn-g  bbng
+bbn-ptip             2/5,arpanet  ptip
+bbn-tenexa           3/5,arpanet  bbna  bbn-a  dndcc
+mit-multics          0/6,arpanet,03  multics  mult
+mit-dms              1/6,arpanet  dms  dm  mitdm  mit-dm
+mit-ai               2/6,arpanet  ai  mitai
+mit-ml               3/6,arpanet  ml  mitml
+rand-ai              0/7,arpanet  rand-rcc  rcc  rail  bland
+chi                  1/7,arpanet  chii
+rand-tip             2/7,arpanet
+rand-unix            3/7,arpanet  isd  rand-isd  udee  udel-ee
+nrl                  0/8,arpanet
+dtnsrdc              1/8,arpanet  nsrdc
+nswc-wo              2/8,arpanet
+nadc                 3/8,arpanet
+nswc-dl              4/8,arpanet
+nrl-arctan           6/8,arpanet
+nrl-csd              7/8,arpanet
+nrl-tops10           8/8,arpanet
+harv-10              0/9,arpanet  acl  harv
+nusc-npt             2/9,arpanet  npt
+ll                   0/10,arpanet
+ll-xn                2/10,arpanet
+ll-11                3/10,arpanet
+su-ai                0/11,arpanet  sail  suai
+su-tip               2/11,arpanet  felt-tip  ilsjum-tip  q-tip
+su-score             3/11,arpanet  score  su-cs  su-20  sucs
+dti                  1/12,arpanet
+gunter-unix          0/13,arpanet  gafs
+gunter-tip           2/13,arpanet  gunt
+cmu-10b              0/14,arpanet  cmub  cmu-b
+cmu-10a              1/14,arpanet  cmua  cmu-a  cmu
+cmu-10d              2/14,arpanet  cmud  cmu-d
+cmu-20c              3/14,arpanet  noname  cmuc  cmu-c  cmu-noname
+i4-tenex             0/15,arpanet  i4  ki4a-tenex  i4a
+i4b-tenex            2/15,arpanet  i4b  ki4b-tenex
+ames-67              0/16,arpanet  ames
+ames-tip             2/16,arpanet
+ames-11              3/16,arpanet
+mitre                0/17,arpanet
+cto-ddf              1/17,arpanet  cto-sdms
+mitre-tip            2/17,arpanet
+comsat-mtr	     3/17,arpanet	
+radc-multics         0/18,arpanet  radc  gafb
+radc-xper            1/18,arpanet  xper
+radc-tip             2/18,arpanet  radt
+radc-tops20          3/18,arpanet  radc-20
+rochester            4/18,arpanet  roch
+radc-unix            5/18,arpanet
+nbs-10               0/19,arpanet  nbs
+wharton              1/19,arpanet  bst
+nbs-tip              2/19,arpanet
+nbs-unix             3/19,arpanet
+cctc                 0/20,arpanet  bcr-110
+dcec-tip             2/20,arpanet
+edn-unix             3/20,arpanet,01  end-unix  ednunix  edn  dcec  bcr-111
+lll-comp             0/21,arpanet  lll  lll-unix
+lll-mfe              1/21,arpanet  mfe
+lll-s1               2/21,arpanet  s-1  s1
+isi-speech11         0/22,arpanet
+usc-isi              1/22,arpanet  isi  usc-isia  isia
+usc-isic             2/22,arpanet  isic
+usc-isid             3/22,arpanet  isid
+usc-tip              2/23,arpanet
+usc-ecl              3/23,arpanet  ecl
+hi-multics           0/24,arpanet  honey
+gwc-tip              2/24,arpanet
+ntia-its             0/25,arpanet  ot-its
+usafa-gateway        1/25,arpanet  usafa
+docb-tip             2/25,arpanet
+pentagon-tip         2/26,arpanet
+pent-unix            3/26,arpanet
+dcecx-0              0/27,arpanet  dcex-0
+dcecx-1              1/27,arpanet  dcex-1
+arpa-dms             0/28,arpanet
+arpa-tip             2/28,arpanet
+arpa-xgp11           3/28,arpanet
+brl                  0/29,arpanet
+ypg                  1/29,arpanet
+bbn-testip           2/30,arpanet
+cca-tenex            0/31,arpanet  cca  dc  datacomputer
+cca-speech           1/31,arpanet
+cca-sdms             2/31,arpanet  sdms  cca-unix
+cca-sip              3/31,arpanet  sip
+mit-devmultics       4/31,arpanet  cisl  devmultics  honeywell
+parc-maxc            0/32,arpanet  parc  xerox-parc  maxc  maxc1
+parc-gateway         1/32,arpanet  portola
+parc-maxc2           2/32,arpanet  maxc2
+sci-ics              3/32,arpanet  ics  sci
+nps                  0/33,arpanet  nps-unix  npsunix
+fnoc                 1/33,arpanet  fnwc  fenwick
+nps-tip              2/33,arpanet
+fnoc-secure          3/33,arpanet  fnwc-secure
+lbl                  0/34,arpanet
+lbl-unix             1/34,arpanet
+berkeley             2/34,arpanet  beserkly  ucb
+nosc-secure2         0/35,arpanet  usc-isir1  isir1
+nosc-sdl             1/35,arpanet  nelc-elf  nelc
+accat-tip            2/35,arpanet  nelc-tip
+nosc-secure3         3/35,arpanet
+coins-tas            0/36,arpanet
+cincpac-tip          2/36,arpanet  sixpac-tip
+dec-2136             0/37,arpanet  dec  2136
+dec-marlboro         1/37,arpanet
+bragg-pkt            0/38,arpanet
+bragg-tip            2/38,arpanet
+sdac-ccp             0/39,arpanet  ccp
+sdac-unix            1/39,arpanet
+sdac-nep             2/39,arpanet
+sd-tip               3/39,arpanet  sdac-44
+bbn-ncc              0/40,arpanet  ncc
+ncc-tip              2/40,arpanet
+bbn-gateway          3/40,arpanet
+norsar-40a           0/41,arpanet
+ndre                 1/41,arpanet
+norsar-tip           2/41,arpanet
+ndre-gateway         3/41,arpanet
+london               0/42,arpanet  uk-ics  ukics-370
+london-epss          1/42,arpanet  london-vdh  lon-epss-gateway  lon-eps-gate
+london-tip           2/42,arpanet
+london-gateway       3/42,arpanet  satnet  lon-sat-gate
+office-1             0/43,arpanet  of1
+office-2             1/43,arpanet  of2
+office-3             2/43,arpanet  of3
+mit-xx               0/44,arpanet  xx  mitxx
+ll-asg               1/44,arpanet
+mit-tip              2/44,arpanet
+mit-mc               3/44,arpanet  mc  mitmc
+moffett-arc          0/45,arpanet  moffett
+moffett-subnet       1/45,arpanet
+collins-pr           0/46,arpanet
+collins-tip          2/46,arpanet  lcsr-tip  rutgers-tip
+wpafb                0/47,arpanet
+wpafb-afwal          1/47,arpanet  avsail  wpafb-afal
+wpafb-tip            2/47,arpanet
+afwl                 0/48,arpanet  awful
+asl                  1/48,arpanet
+afwl-tip             2/48,arpanet  awful-tip
+sandia               3/48,arpanet
+bbn-tenexb           0/49,arpanet  bbnb  bbn-b
+bbn-tenexd           1/49,arpanet  bbnd  bbn-d
+bbn-speech-11        2/49,arpanet  bbn-speech11
+bbn-tenex            3/49,arpanet  bbn  bbnc  bbn-c  bbn-tenexc
+udel                 1/50,arpanet  udel-ee
+darcom-tip           2/50,arpanet
+sri-ka               0/51,arpanet  ka  sri-tenex  darcom-ka  darcom
+sri-c3po             1/51,arpanet  pkt40  c3po
+sri-unix             2/51,arpanet  thx  thx-1145
+sri-r2d2             3/51,arpanet  pkt34  r2d2
+isi-xgp11            0/52,arpanet
+usc-isie             1/52,arpanet  isie
+usc-isif             2/52,arpanet  isif
+usc-isib             3/52,arpanet  isib  isi-devtenex
+eglin                0/53,arpanet  afsc-ad
+ncsc                 1/53,arpanet  ncsl
+eglin-dev            2/53,arpanet  afsc-dev
+martin               3/53,arpanet
+cit-20               0/54,arpanet  cal-tech  caltech
+cit-11               1/54,arpanet
+cit-3032             2/54,arpanet
+anl                  0/55,arpanet  argonne
+sumex-aim            0/56,arpanet  aim  sumex
+su-isl               1/56,arpanet  isl
+nsa                  0/57,arpanet  tycho
+coins-gateway        1/57,arpanet  coins
+nyu                  0/58,arpanet
+bnl                  1/58,arpanet  brookhaven
+rutgers              2/58,arpanet  ru-ai  ruai  rutgers-10  rutgers-20  rutg
+nusc                 3/58,arpanet
+etac                 0/59,arpanet
+centacs-mmp          0/60,arpanet  goonhilly
+coradcom-tip         2/60,arpanet
+centacs-tf           3/60,arpanet
+stl-tip              2/61,arpanet  st-louis  stla-ptip
+utexas               0/62,arpanet  utex  texas
+bcr-108              1/62,arpanet
+bbn-rsm              0/63,arpanet  bbnrsm  bbnr  bbn-k  bbnk
+bbn-c70              2/63,arpanet  bbnc70  c70
+wralc-tip            2/64,arpanet
+robins-unix          3/64,arpanet
+sdac-44              2/65,arpanet  sd-tip  afsc-sd-tip
+afgl                 1/66,arpanet
+afgl-tip             2/66,arpanet
+hqafsc-tip           2/67,arpanet  afsc-hq-tip
+usgs1-tip            2/68,arpanet
+usgs2-tip            2/69,arpanet
+usgs3-tip            2/70,arpanet
+bbn-tenexf           0/71,arpanet  bbnf  bbn-f
+clarksburg-ig        1/71,arpanet
+bbn-unix             0/72,arpanet  bbnu
+bbn-tac		     2/72,arpanet
+bbn-ig		     3/72,arpanet
+wsmr-tip             2/74,arpanet
+mit-gw		     0/77,arpanet
+ucb-vax              0/78,arpanet,01  berk-vax
+bbnt                 0/82,arpanet  bbnt
+bbn-vax              1/82,arpanet,01  bbnv
+bbn-hp               0/86,arpanet  bbnhp
+mit-gw              	4/10/4,lcsnet  gw
+mit-bridge          	5/10/5,lcsnet  mit-br  bridge
+mit-ln              	10/10/10,lcsnet  csr  ln  mitln
+mit-rts             	11/10/11,lcsnet  rts  dssr
+mit-rts40           	12/10/12,lcsnet  rts40
+mit-vax             	20/10/20,lcsnet  vax
+xx-network-11       	40/10/40,lcsnet
+mit-tiu1            	50/10/50,lcsnet  tiu  tiu1
+edn-host1           	   1/1/1,edn  edn-1  edn1  end1  ednb
+edn-host2           	   2/0/2,edn  edn-2  edn2  end1  ednc
+edn-host3           	   3/0/3,edn  edn-3  edn3  end3  edna
+su-ai               	4153242149,dialnet  sail  suai
+su-gsb              	4153261639,dialnet  gsb  biz-skool
+su-lots             	4153291870,dialnet  lots
+hewlett-packard     	4158578645,dialnet  hp
+ccn-tiu-1           	 0,nosc-lccn
+ccn-tiu-2           	03006,nosc-lccn
+ccn-tiu-1           	03407,nosc-lccn
+comsat-pla		0/1794,dcn-comsat,01 comsat

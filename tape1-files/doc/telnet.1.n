@@ -1,0 +1,264 @@
+.TH TELNET 1
+.SH NAME
+telnet \*- communicate using TELNET protocol
+.IX protocol
+.IX "\*itelnet\*r command"
+.IX "TELNET protocol"
+.SH SYNOPSIS
+\*btelnet\*r [ \*ropen-arguments\*r ]
+.SH DESCRIPTION
+The \*itelnet\*r command is used to communicate with another host using
+the TELNET protocol.
+.IX telnet
+.IX host
+If it is invoked with no arguments,
+it enters command mode,
+indicated by its prompt (an asterisk).
+In this mode, it accepts and executes the \*itelnet\*r commands listed below.
+If it is invoked with arguments,
+it performs an \*bopen\*r command (see below) with those arguments.
+Thus, \*itelnet hostname\*r opens a connection to \*ihostname\*r.
+.PP
+Once a connection has been opened,
+\*itelnet\*r enters input mode.
+In this mode,
+text typed to \*itelnet\*r is sent to the remote host.
+.IX "remote host"
+To issue \*itelnet\*r commands when in input mode,
+precede them with the \*itelnet\*r
+\*iescape character\*r (initially \*(SQ^\*(AP).
+.IX escape
+All text from the \*itelnet escape character\*r to the end
+of the line is taken to be a \*itelnet\*r command.
+Neither the escape character nor the command is sent to the foreign host.
+.IX foreign host
+To send the escape character, type two of them in succession.
+.PP
+When in input mode,
+the normal terminal editing conventions may not be available,
+rendering it difficult to type complicated \*itelnet\*r commands.
+If you type an escape character at the end of a line,
+\*itelnet\*r will enter command mode for one line.
+.PP
+The following commands are available.
+Only enough of each command to uniquely identify it need be typed.
+.PP
+.TP 9
+\*bhelp\*r, \*b?\*r
+Briefly explain each command.
+.PP
+.TP 9
+\*bverbose\*r
+Announce all changes in the
+status of the
+.IX status
+connection.
+.IX connection
+.PP
+.TP 9
+\*bbrief\*r
+Announce only important changes in the status of the connection
+(default).
+.PP
+.TP 9
+\*bquit\*r
+Close the connection and return to command level.
+.IX close
+.PP
+.TP 9
+\*bip\*r
+Send an Interrupt-Process command.
+This will generally
+interrupt \*- that is,
+.IX interrupt
+halt \*- the current
+.IX halt
+command or process on the foreign host.
+.PP
+.TP 9
+\*bao\*r
+Send an Abort-Output command.
+If the foreign host implements it, Abort-Output will cause output from
+the foreign host to be
+.IX abort
+aborted, but permit the current
+command or process to continue to completion.
+.PP
+.TP 9
+\*bsynch\*r
+Send a TELNET Synch.
+.PP
+.TP 9
+\*bbreak\*r
+Send a Break command.
+This command is intended to simulate pressing the
+BREAK key on a terminal attached to the foreign host.
+.IX break
+.PP
+.TP 9
+\*bec\*r
+Send an Erase-Character command.
+This command erases the last character sent to the foreign host,
+.IX erase
+just as the foreign host\*(APs indigenous erase character would.
+.PP
+.TP 9
+\*bel\*r
+Send an Erase-Line command.
+This command erases the entire last line sent to the foreign host,
+just as the foreign host\*(APs indigenous erase-line character would.
+.PP
+.TP 9
+\*bga\*r
+Send a Go-Ahead command.
+This command is useful only in special circumstances,
+such as when communicating with another terminal which requires
+an explicit command to unlock its keyboard.
+.PP
+.TP 9
+\*bayt\*r
+Send an Are-You-There command.
+If the foreign host is still up and reading the user\*(APs characters,
+it will respond in some visible or audible way.
+Note that a response to this command only guarantees that the
+server on the foreign host is up; it does not necessarily imply
+anything about the state of the user\*(APs process or job.
+.PP
+.TP 9
+\*bstty\*r
+Set or display the
+.IX "terminal mode"
+terminal modes.
+The syntax is identical to that of the UNIX
+.B stty
+.IX stty
+(1) command.
+If the command is issued with no arguments, it will merely
+print out the current terminal modes, just like
+.B stty.
+.PP
+.TP 9
+\*bmodtty\*r
+Set or display the extended terminal modes.
+This command merely invokes the system \*bmodtty\*r command
+.IX modtty
+(if it exists).
+.PP
+.TP 9
+\*bx\*r
+Invoke the
+Shell and pass it the rest of the line
+.IX shell
+for execution.
+While the Shell is invoked, the modes of the terminal are
+changed to those in use when
+.I telnet
+was invoked.
+If there are no arguments to \*bx\*r, the shell will read from
+the standard input until an EOT (CNTRL-D) is typed instead.
+.PP
+.TP 9
+\*bopen\*r [ \*rhost-id\*r ] [ \*roption\*r ] \*E
+.TP 9
+\*bconnect\*r [ \*rhost-id\*r ] [ \*roption\*r ] \*E
+.br
+Open a network connection to the specified host.
+.IX open
+The \*ioptions\*r are as follows:
+.PP
+.TP 9
+\*b-fs\*r #
+Use the specified foreign socket number.
+.IX "socket number"
+The default is socket 23.
+.PP
+.TP 9
+\*b-t\*r #
+Set timeout.
+If the connection attempt does not complete in the
+specified number of seconds, it will be aborted.
+.PP
+.TP 9
+\*b-ls\*r #
+Use the specified local socket number.
+The default is unspecified, unless \*b\*-server\*r is specified,
+in which case it is socket 23 decimal.
+.PP
+.TP 9
+\*b\*-direct\*r
+.TP 9
+\*b\*-init\*r
+.TP 9
+\*b\*-specific\*r
+.TP 9
+\*b\*-server\*r
+.TP 9
+\*b\*-duplex\*r
+.TP 9
+\*b\*-relative\*r
+.br
+These options set the corresponding flags in the call upon the NCP.
+Their use is somewhat specialized and will not be described here.
+See NCP\ (4).
+.PP
+.TP 9
+\*b\*-fd\*r \*ifdes\*r
+This option sets the file descriptor used by the NCP
+when the \*b\*-relative\*r option is specified.
+Its use is somewhat specialized.
+See NCP\ (4).
+.i0
+.PP
+.in 16
+After the command is issued, \*itelnet\*r will say \*(OQTrying\*E\*(CQ.
+When the connection becomes established,
+\*itelnet\*r will say \*(OQOpen\*(CQ.
+.in 0
+.PP
+.TP 9
+\*bclose\*r
+Close the current
+.IX close
+network
+.IX network
+connection (if any).
+\*iTelnet\*r will wait until its internal buffers have been emptied
+before closing the connection.
+.PP
+(\*iTelnet\*r also implements
+the \*(OQsuppress-go-ahead\*(CQ option,
+by accepting it and taking no action.)
+.PP
+.TP 9
+\*bset escape\*r \*rc\*r
+.br
+Set the escape character to \*ic\*r.
+.TP 9
+\*bset escape off\*r
+.br
+Turn off the escape character.
+This command renders it impossible to issue \*itelnet\*r commands.
+.i0
+.PP
+Once a connection has been opened,
+the messages "Remote echo" or "Local echo" may appear.
+"Remote echo" indicates that typed characters will be echoed
+by the remote host,
+rather than by the UNIX system running \*itelnet\*r.
+"Local echo" indicates that typed characters will be echoed by
+the local host.
+When remote echo is in effect,
+.IX "remote echo"
+the normal erase
+.IX erase
+and kill line
+.IX "kill line"
+characters will have no effect;
+instead, they will be transmitted directly to the foreign host.
+Similarly, INTERRUPT (DEL), QUIT (FS), and EOF (CTRL-D)
+will also be transmitted to the foreign host.
+When local-echo is in effect,
+.IX "local echo"
+all these characters will have their usual effect except INTERRUPT,
+which will send a TELNET Interrupt-Process command.
+.SH BUGS

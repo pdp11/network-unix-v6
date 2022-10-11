@@ -1,0 +1,89 @@
+.TH TRPT 1 
+.SH NAME
+.IX "\*itrpt\*r command"
+.IX "network debugging"
+trpt \- print TCP debugging log
+.SH SYNOPSIS
+.B trpt
+[
+.B \-ensw
+]
+[
+.B \-f
+filename ] [ tcb ]
+.SH DESCRIPTION
+.I Trpt
+formats and prints the debugging log file produced by the debugging option
+of
+.I tcp(5).
+The log consists of binary data produced by transactions of the TCP
+finite state machine.  Entries are made for each transaction of a
+suitably enabled connection:  inputs from the network, transitions
+of the state machine, and output to the network.
+.PP
+With no options, trpt will print the entire contents of the standard
+debugging log,
+.I /etc/net/tcpdebug.
+If a
+.I tcb
+address is specified, only those transactions corresponding to the
+connection with the given TCB are printed.  The TCB address for a
+connection may be found with the
+.I netstat(1)
+command.
+The options recognized by trpt are:
+.IP -e 5
+Terminate if any badly formatted entries are encountered.  Normally,
+only a warning diagnostic is printed.
+.IP -f 5
+Use 
+.I filename
+as the debugging log, instead of /etc/net/tcpdebug.
+.IP -n 5
+Print only network traffic and not state transitions of the TCP machine.
+.IP -s 5
+Print only state transitions of the TCP machine and not network traffic.
+.IP -t 5
+Do not print the timestamp that is included in the entry.
+.IP -w 5
+Disregard badly formatted entries and continue processing the debugging
+log.  Suppresses warning diagnostics.
+.PP
+There are three types of entries printed by trpt:  state transitions,
+network input, and network output.  State transitions appear as:
+.sp
+.ce
+<oldstate> X <input> --> <newstate> [(FAILED)]
+.sp
+where,
+.I oldstate
+and
+.I newstate
+are names of states of the TCP machine, and
+.I input
+describes the event that caused the transition.  If the
+transition did not take place because an enabling condition for that
+transition was not satisfied, the FAILED token is printed.  Network
+input and output entries appear as:
+.sp
+.ce
+[IN|OUT] seq=<seq> ack=<ack> win=<win> len=<len> flags: [AEFRSU] [(FAILED)]
+.sp
+where
+.I seq
+is the sequence number of the message,
+.I ack
+is the acknowledgement number,
+.I win
+is the transmitted data window,
+.I len 
+is the length of any data in the message, and the flags are:
+ACK, EOL, FIN, RST, SYN, and URG. For output only, FAILED is printed
+if the message was not actually sent.
+All data is printed in hexadecimal, except for the window and length fields,
+which are decimal.  Each entry is preceeded by a timestamp and the TCB address
+of the connection.
+.SH FILES
+/etc/net/tcpdebug
+.SH SEE ALSO
+netstat(1), net(5)

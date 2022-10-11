@@ -1,0 +1,234 @@
+number	date	culprit	sysname		description
+------	-------	-------	-------		--------------------------------------
+100	16Jun78	cdh	unix.std	Generation of "standard system"
+					from old 40 and 45 systems
+101	11Jul78	agn	unix.net	Addition of network software (NCP)
+102	20Jul78	cdh	unix.await	Addition of await and capacity
+					and interval timer calls
+103	30Jul78	cdh	unix.bio	Update of bio.c routines to
+					implement proper buffer aging.
+104	4Aug78	cdh	unix.dm,unix.dh	Implementation of dh and dm drivers.
+105	15Aug78	chiu	unix.newnet	Implementation of new NCP kernel
+105	29Aug78	cdh	unix.405	Implementation of overlay
+					(type 405) files.
+106	31Aug78	cdh	unix.nfile	Increase of NFILE and INODE params.
+106	31Aug78	chiu	unix.dfix	Fix of trap type 0 problems in net.
+106     1Sep78  jsq     unix.reset      Net_reset which doesn't require
+					host special files.
+106	5Sep78	cdh	none		Update of m40.s and m45.s to add
+					_itol and _spl_imp definitions
+					that exist in m70.s.
+106     6Sep78  chiu    unix.nsysc      Increased sysent table to 128 slots.
+					Modified trap.c so that it does
+					proper bound checking of system calls.
+107     6Sep78  chiu    unix.prfile     Added two system calls:
+					piofile and rfofile.
+107     7Sep78  chiu    unix.gwsys      Added yet another gateway related
+					system call: fres.
+					Also, made piofile, rfofile and fres
+					callable only by the super user.
+107     8Sep78  chiu    none            Changed capac so that it returns
+					the number of bytes available for
+					reading from a read socket instead
+					of -1.
+107     12Sep78 chiu    unix.gwpipe     Added line in rdwr routine of sys2.c
+					so that processes "await"ing on a
+					pipe are awakened.
+107	12Sep78	dan&jsq	unix.pty	Fixed bug in pty driver, added await
+					and capac to it; awaitr.c still has
+					to be updated for it to work.
+107     25Sep78 dan     unix.aw         Fixed error codes in awaitr.c to not
+                                        conflict with net error codes;
+                                        moved #defines for errors to user.h
+107     27Sep78 kahn&cdh unix.gen       Added genisco driver.
+107     28Sep78 dan      unix.dan       Added await and capac to pty and dh
+                                        drivers. tty.c, dh.c, dhdm.c, pty.c,
+                                        and awaitr.c (in ken) were changed.
+108     2Oct78  cdh     none            Reorganization of await and capacity
+					tables from awaitr.c to c.c
+108     13Oct78 jsq     na              Distributed to CCA, and reconfigured
+					there.
+109     18Oct78 jsq     unix.rawsys     raw message stuff installed from
+					sys.raw.  Also lcba source reinstalled
+					and slightly changed. (see ./sysdiff).
+109     19Oct78 jsq     unix.rawsys     fixed rawdaemon crash bug, changed
+					rawmsg read capacity, added ifdef's
+					on NCP.  (see ./ncpdiff).
+109     20Oct78 chiu    unix.rawsys     changed netread so that a read of
+					an already closed connection would
+					get an EOF (i.e. 0) instead of an
+					error.
+109     20Oct78 jsq     various         several system with different things
+					compiled in them.  (see ./defdiff).
+109     23Oct78 chiu    unix.rawsys     an awaiting process will be
+					awakened if a CLS comes in for one
+					of its enabled file descriptors.
+110	26Oct78	mek	unix.mek	Pipe and port improvements.
+					Response mode in ports.
+					Await and enable code installed in pipes
+110     26Oct78 cdh     unix.90procs    updated param.h and tty.h to expand
+					number of processes, clist size,
+					and tty high water mark.  Also, dh11
+					DMA buffers have been expanded.
+111     31Oct78 klh     unix.3Genisco   modification to Genisco driver to know
+					about 3 Genisco PGP's and to correctly
+					handle multiple process access to
+					single PGP.
+111	3Nov78	mek	unix.3ge	added new system call - qtime.
+111     5Nov78  klh     unix.3gep       Fix of Genisco driver which caused
+					data to be written in low core when
+					GMEM and GN open simultaneously.
+111	8Nov78	mek	unix.noresp	removed response mode code.
+					moved network buffer parameters from
+					netbuf.h to param.h
+					capac call to pipe fildes no longer
+					returns -1 if writer is blocked.
+111    16Nov78  agn     na              modified tape dump in m70.s to
+					correct bug in handling switching to
+					800 bpi.
+111     28Nov78 jsq     unix.rmi        lcba code fixes, small RMI changes.
+111	1Dec78	cdh	unix.buffix	change to breada in bio.c so that it
+					does not initiate read ahead if there
+					are no buffers available.  This should
+					fix some buffer lockout problems.
+111     5Dec78  jsq     na              lcba bug fix: set_lcba.c, malloc.c.
+111     5Dec78  agn     unix.ht         revised ht driver from Stanford; also,
+					XON/XOFF handling: dh.c,dz.c,ht.c,
+					tty.c,tty.h
+112     6Dec78  jsq     na              sys.111 copied into sys.112.
+
+112     6Dec78  mek     unix.nport      Addition of nport system call.
+					Correction of possible 'phantom
+					awake' call in portread
+
+
+112     20Dec78 mek     unix.awdeb      Debug prints added to awaitr.c
+					to track down a potential itab
+					bug.
+112     4Jan78  cdh     unix.morebuf    Added buffers and raised tty
+					high water mark for performance.
+112     18Jan79 jsq     none            backfitted rmi bug fixes from sys.113
+
+
+112     29Jan79 mek     unix.smallpipe  Reduced PIPSIZ and PORTSIZ to 1024
+112     31Jan79 chiu    unix.msg        minor change to nrdwr so that
+					read of a net dummy open fd will
+					return -1 (error) instead of 0.
+112     1Feb79  cdh     unix.40files    Changed NOFILE from 25 to 40
+					to allow more files per process.
+112     8Feb79  chiu    na              changed cirmin/awaitr.c so that it
+					now returns a mod 256 number. It
+					turns out that a process may never
+					timeout from an await call if the
+					change was not made.
+112     13Feb79 chiu    na              changed NOFILE back to 25.
+112     13Feb79 chiu    unix.rmsg       changed structure
+					of network socket so that it
+					covers all of the inode structure.
+					This is motivated by the need for
+					2 more fields in the socket structure.
+112     20Feb79 jsq     u112.11.reboot  New reboot system call.  Sys2.c and
+					m70.s were changed, and nothing else.
+					New command and disk bootstrap, also.
+112     26Feb79 jsq     u112.12.fred    Asynchronous physio changes and lcba
+				fixes from cca-sdms. Affected: param.h, buf.h,
+				(new flag), bio.c/iodone, bio.c/physio only.
+112     26Feb79 jsq     na              Distributed to cca-sdms.
+113     27Feb79 jsq     u113.1.long     Long leaders, etc.
+113     28Feb79 dan     u113.2.glorp    Changed capac to return -1, -1
+                                        for files, dirs, block specials,
+                                        and /dev/mem /dev/kmem /dev/null
+113     1Mar79  dan     u113.3.atlast   Fixed await to scan itab properly.
+113     2Mar79  dan     u113.4.ttwake   Fixed awake calls in dz, dh drivers
+                                        so that awakening on TTLOWAT works
+					CMAPSIZ to 264 from 200
+113     3Mar79  jsq     u113.5.rbuf     rbuf_max 80; kb_hiwat 15.
+113     5Mar79  jsq     u113.6.40files  NOPROCS to 40 from 25
+113     6Mar79  jsq     u113.7.netopen  fixed bug in netopen
+113     7Mar79  jsq     u113.8.cmapsiz  CMAPSIZ, SMAPSIZ to 264 from 200
+					((NTEXT + NPROC + 2) * 2)
+					(CMAPSIZ was actually changed 3-2-79)
+113     13Mar79 jsq     na              put argument passing bootstraps in
+					m40.s and m45.s.
+114     13Mar79 jsq     u114.1.file     expanded file structure,  changed
+					port code to use it right.
+114     13Mar79 jsq     u114.2.fstat    fstat on net files returns short
+				      host or long depending on style of open
+114     14Mar79 cdh     u114.3.unlock   Changed inode locking to eliminate
+					spurious unlocks in routines update,
+					closei, exit, and chdir.
+114     14Mar79 jsq     u114.4.rmifix   RMI files indicated by FRMI in file.
+114     14Mar79 jsq     u114.5.rmicap   fixed RMI capac bug.
+114     15Mar79 dan     u114.6.cty      added /dev/tty device.
+                kahn                    added cutloose sys call and 16 ptys
+114     15Mar79 dan     u114.7.cty      fixed /dev/tty device (I think).
+114     16Mar79 jsq     same as above   changed RAWMSG to RMI, FRMI to FRAW.
+					Added names to many endifs.
+					Object identical to previous.
+114     20Mar79 jsq     u114.8.nop      Right NOP length in impopen.
+					This should be the last necessary
+					long leader change.
+114     21Mar79 jsq     u114.9.ropen    Removed unused RMI open options.
+114     21Mar79 jsq     u114.10.pcap    Fixed bug in pipe capac on EOFP.
+115     21Mar79 jsq     u115.1.rstrat   Changed RMI input demultiplexing so
+			connection table entry instead of socket is used -
+			impio.c/imp_input, impio.c/imp_dwn, imp.h, rawmain.c.
+			comments and some code in imp_input reformatted.
+115     22Mar79 dan     u115.2.pty      Added kludge to pty so ctrller can
+                                        tell when slave side open
+115     26Mar79 dan     u115.3.misc     Insignificant chg to awaitr.c
+                                        Add empty() to pty.c
+                                        Make kl.c use ttycap
+                                        Remove '370 parity' fm dh.c
+115     30Mar79 dan     u115.4.tty      Remove 036 backspace char
+                                        Add nl3 delay type (1 clock tick)
+115     3-3-79  jsq     na              Distributed to CCA and EDN.
+115     4-6-79  dan     u115.5.tty      Changed ttyinput delim fm 0377 to 0376
+                                        tty.h and tty.c were changed.
+115     4-6-79  dan     u115.6.tty      Changed getc and putc; added unputc.
+                                        This is a compatible change.
+                                        m70.s was changed.
+115     4-9-79  dan     u115.7.awt      Combined awtdis and awtenb code.
+                                        awaitr.c was changed.
+115     4-9-79  dan     u115.8.awt      Converted device drivers to use
+                                        combined enable/disable table
+                                        in c.c. c.c, awaitr.c, kl.c, dz.c,
+                                        dh.c, pty.c, and ports.c were changed.
+115     4-9-79  dan     u115.9.awt      Moved awt and cap tables into cdevsw.
+                                        awaitr.c, c.c, and conf.h were changed.
+115     4-9-79  jsq     same as above   removed ifdef on NCP from pty entries
+					in c.c, added ifdef on NETWORK around
+					defines of GATEWAY, NCP, and RMI in
+					param.h. Object identical to previous.
+115     4-9-79  jsq     u115.10.text    changed m70.s/start so 7 text pages
+					are useable rather than 6.
+----------------------- SYS.116 GENERATED --------------------------
+116     4-12-79  dan    u116.1.short    eliminated old await call code.
+                                        awaitr.c, sysent.c were changed.
+116     4-14-79  jsq    u116.2.link     (un)link changes accessed time instead
+					of modified time in inode.
+					sys2.c/link, sys4.c/unlink changed.
+116     4-19-79  dan    u116.3.tty      stty nlx, for x != 0, suppresses Rand's
+                                        ctrl-P. tty.c was changed.
+116     4-23-79  dan    NA              Installed new getc/putc/unputc in m45.s,
+                                        m40.s. m45.s, m40.s were changed. New
+                                        system NOT made. (Good luck!)
+116     4-25-79  dan    u116.4.tty
+                                        Removed empty() code.
+                                        pipe.c, sysent.c, pty.c, tty.c were
+                                        changed.
+                                        Also removed give_up_processor(),
+                                        as it is no longer used: slp.c was
+                                        changed.
+                                        Added new tty code for testing purposes.
+                                            sysent.c, c.c were changed;
+                                            xtty.c, xpty.c, xty.h were added.
+                                            This change adds a new system call
+                                            ("modtty" = 73) and two temporary
+                                            new character devices.
+116     4-26-79  dan    u116.5.tty      Fixed bugs in xtty.c xpty.c
+116     27Apr79  cdh    u116.6.dmax     Added device driver and vectors
+					for dmax-16
+116     29Apr79  dan    u116.7.tty      Fixed bug in xpty.c: pty array should
+                                        have been called xpty. xpty.c was
+                                        changed.

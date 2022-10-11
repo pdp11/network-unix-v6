@@ -1,0 +1,52 @@
+119,125d118
+* 
+* 	/* BBN: mek (4/30/79)  -  free all unneeded buffers.
+* 	   Moved from below */
+* 
+* 	curpage = u.u_offset[1]/BLKSIZE;
+* 	for ( i =0; i < curpage; i++ )  bdfree(ip,i);
+* 
+135,138d127
+* 
+* 		/* BBN: mek ( 4/30/79 ) - free the current buffer page */
+* 		bdfree(ip, curpage);
+* 
+145a135
+. 	/* bbn:mek---free all unneeded buffers */
+147c137,138
+* 	/* avoid awake if called from portread */
+---
+. 	curpage = u.u_offset[1]/BLKSIZE;
+. 	for ( i =0; i < curpage; i++ )  bdfree(ip,i);
+148a140,141
+. 	/* avoid awake if called from portread */
+. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

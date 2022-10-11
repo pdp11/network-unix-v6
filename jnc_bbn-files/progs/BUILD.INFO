@@ -1,0 +1,83 @@
+default: local
+rm -f now
+date>now
+
+local
+dpy ss file_use netstat rawstat ps snap icheck
+rm -f local
+date > local
+
+standard
+/usr/bin/dpy /usr/bin/ss file_use /usr/bin/netstat /usr/bin/rawstat \
+/bin/ps /usr/bin/snap /bin/icheck
+rm -f standard
+date>standard
+
+rmobjects
+now
+rm -f dpy ss file_use netstat rawstat ps snap icheck
+rm -f *.o
+rm -f rmobjects
+date>rmobjects
+
+dpy
+dpy.c ../h/param.h ../h/proc.h ../h/tty.h ../h/user.h
+ncc -sO dpy.c
+
+ss
+ss.c ../h/param.h ../h/proc.h ../h/tty.h ../h/user.h
+ncc -sO ss.c
+
+file_use
+file_use.c ../h/param.h ../h/file.h ../h/inode.h
+ncc -sO file_use.c
+
+netstat
+netstat.c ../h/param.h ../h/netparam.h ../h/leader.h ../h/contab.h ../h/net.h\
+/lib/libn.a /lib/libj.a
+ncc -sO netstat.c -ln -lj
+
+rawstat
+rawstat.c ../h/param.h ../h/proc.h ../h/netparam.h ../h/rawnet.h ../h/net.h \
+/lib/libn.a /lib/libj.a
+ncc -sO rawstat.c -ln -lj
+
+icheck
+icheck.c ../h/ino.h ../h/filsys.h
+ncc -sO icheck.c
+
+ps
+ps.c ../h/param.h ../h/proc.h ../h/tty.h ../h/user.h
+ncc -sO ps.c
+
+snap
+snap.c ../h/proc.h /usr/sys/h/statbuf.h
+pcc -O -o snap snap.c
+
+/usr/bin/dpy
+dpy
+cp dpy /usr/bin/dpy
+
+/usr/bin/ss
+ss
+cp ss /usr/bin/ss
+
+/usr/bin/netstat
+cp netstat /usr/bin/netstat
+
+/usr/bin/rawstat
+rawstat
+cp rawstat /usr/bin/rawstat
+
+/bin/ps
+ps
+cp ps /bin/ps
+
+/usr/bin/snap
+snap
+cp snap /usr/bin/snap
+
+/bin/icheck
+icheck
+cp icheck /bin/icheck
+

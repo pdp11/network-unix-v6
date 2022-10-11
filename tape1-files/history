@@ -1,0 +1,164 @@
+unix.32v	30 Nov 79	agn	Original Bell UNIX
+
+u1.1.lp		30 Nov 79	agn	Moved swap to drive 1, added 16 line
+					dz, added lp device.  Changed dz.c,
+					conf.c, univec.c. Also, changed tty 
+					mode NL3 to provide a pad of 020 after
+					a new line for Ann Arbor.  Changed
+					tty.c. Updated makefile and loadall.
+					Moved dev/lp.c to sys/lp.c.
+
+u1.2.lp		07 Dec 79	fram	Removed conversion of newline to
+					formfeed from line printer driver
+					(sys/lp.c).  Was causing whole
+					blank pages on line printer listings.
+
+u1.3.dz         12 Dec 79       fram    Commented out all references to modem
+				        control bits in dz.c.  This was a  
+					quick-and-dirty fix to make dz driver
+					work with current-loop lines, for which
+					modem status is undefined.  Does not
+					hurt in EIA case either.  (Essentially,
+					all our lines are "hard-wired", so 
+					modem control is really unnecessary.)
+
+u1.4.lp         18 Dec 79       fram    Edited lp.c to have default line 
+					printer width of 80 columns (had been
+					changed earlier to 132).  Note:  
+					observed behavior after change is that
+					line printer prints a max of 76 cols.
+					This is a mystery.
+
+u1.5.tty         4 Jan 80       edh     Changed tty.c to throw away extra
+					X-ON X-OFF characters when reading
+					from a terminal.
+
+u1.6.mknod      11 Jan 80       fram    Changed mknod system call (sys2.c)
+					so that third argument is not coerced
+					to a short.  Allows specification of
+					a generalized first block pointer
+					which is useful for creating an inode
+					which "captures" a specific bad block.
+
+u1.7.tty        24 Jan 80       fram    Changed tty.c to handle X-ON/X-OFF  
+					properly at interrupt level.  
+					Supersedes fix made by edh in u1.5.tty
+					on 4 Jan 80.
+
+u1.8.tty        9 Feb 80        dbarach, Changed tty.c to cause anything
+				rwells  on the tty input queue to cause
+					gtty to set the 0x10000 bit in the
+					flag word. This bit was unused by 
+					the previous system. This is a quick
+					and dirty empty() call for use in
+					the editor.
+
+-------------------- sys.2 created  9 May 80 -------------------------------
+
+
+2       15 May 80 tpb and yba   u2.1.mem 
+	change mem.c driver to test against PHYSPAGES, not MAXMEM
+	Change to h/file.h: add flag values for ncp.
+	Add ncpk subdirectory.
+	Add ncp header files to h subdirectory.
+
+2       9 May 80 u2.2.ncp       yba     add ncp to v7 vax unix
+	Change to h/file.h: add flag values for ncp.
+	Add ncpk subdirectory.
+	Add ncp header files to h subdirectory.
+	Change use of spl, mapalloc, buf headers in ncp code.  No RMI.
+	Change file structures (h/file.h).
+	Add define of spl_imp as spl5 to h/netparam.h
+	Add iialloc/free routines to sys/alloc.c
+	Add fushort sushort routines to sys/locore.s
+	Add entry for acc_iint/acc_oint in sys/univec.c
+
+2       1 Aug 80 u2.3.ncp       yba     add hooks to nrdwr
+	Change sys/sys2.c for network.
+
+2       7 Aug 80 u2.4.ncp       yba     fix bug in kerbuf
+	Change to kerbuf.c: use geteblk() in place of old getblk(NODEV,0).
+
+________________________________ Converted to Berkeley System  10-Aug-80 ___
+
+------------------------------ Sys.3 created 12 August 1980 ---------------
+
+3       12 Aug 80 vmu3.1.ncp      yba     add ncp kernel to UC/B system
+	Add header files to h subdirectory:
+		acc.h
+		contab.h
+		hosthost.h
+		ill.h
+		imp.h
+		imp11a.h
+		iobuf.h
+		leader.h
+		ncp.h
+		net.h
+		netbuf.h
+		netopen.h
+		netparam.h
+		rawnet.h
+		rfnm.h
+		leader.h
+
+	changes to h/
+		param.h
+		buf.h
+		user.h
+		file.h
+
+	Add directories ncpk, ncpd, smalldaemon
+
+	changes to ncpk/
+		acc.c
+
+	Changes to sys/
+		alloc.c         add iialloc/iifree routines
+		locore.s        add fushort, sushort
+		univec.c        add acc interrupt service
+		sys2.c
+		conf.c          (Change major device number on /dev/ncpkernel)
+
+3       vmu3.2.ncp      yba     13 Aug 80       fix buffer sizes to vmunix size
+	Changes to h/netparam.h (kb_hiwat and init kb_), h/netbuf.h
+
+3       vmu3.2.test     yba     24 Sep 90       disable imp hardware for test
+
+3       vmu3.3.test     agn     21 Oct 80       added modifications to 
+                                                sys/fio.c, sys/sys2.c, 
+                                                sys/sys3.c to invoke network.
+						Adopted C/70 network code for 
+						kernel.
+
+3       vmu3.4.hog      dan     ?               ?
+
+3       vmu3.5.tty      rdk     12 Dec 80       changed padding on -nl2
+						from 6 to 2 for jp
+
+--------------------------------------- sys.4 created 5 January 81 -------------
+
+4       vmu4.1.test     rfg     5 Jan 81        Added TCP network code
+						to kernel.
+						mods to sys/sys2.c, sys/sys3.c,
+						sys/fio.c, sys/conf.c
+						added h/acc.h h/fsm.h h/fsmdef.h
+						h/ip.h h/net.h h/tcp.h
+						h/tcp_pred.h and net/*.c
+
+4       vmu4.2.loop     rfg     12 Jan 81       added s/w looping to imp_io.c
+						test version
+
+4       vmu4.3.tcp      rfg     2 March 81      first production tcp kernel.
+
+4       vmu4.7.pty      rfg     23 March 81     added ptys (pty.c)
+
+----------------------------sys.5 created May 20 1981--------------------------
+5	vmu5.0.tty	ers	11 Aug 81	Change tty driver so that it
+						does not echo the extra break
+						character (t_brkc) if that
+						character is ESC (octal 33).
+						Change to ptcwrite in pty.c
+						to call
+						linesw[tp->t_line].l_rint
+						instead of ttyinput.

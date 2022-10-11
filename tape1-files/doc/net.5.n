@@ -1,0 +1,307 @@
+.TH NET  5                                       
+.SH NAME
+.IX network
+.IX TCP
+.IX IP
+.IX "Transmission Control Protocol"
+.IX "Internet Protocol"
+tcp, ip, rawnet \- internet networking software
+.SH SYNOPSIS
+.B open ("/dev/net/net", ncon);
+.sp
+.B struct con *ncon;
+.sp
+.nf
+.ta \w'struct 'u +\w'unsigned  'u +\w'struct tcb *utcb; 'u
+.so /usr/src/sys.4/h/con.h    
+.fi
+.SH DESCRIPTION
+The special file
+.I /dev/net/net
+is used to access ARPANET type packet-switched networks via the DoD standard
+host-host Internetworking Protocols, 
+.B TCP
+(Transmission Control Protocol), and
+.B IP
+(Internet Protocol).  It also allows communication over the local network(s)
+to which the system is connected with "raw" packets, enabling user software to
+do its own communications processing.  Access to the network at this level
+is the most direct form of use.  It is assumed that most users will use higher
+level protocol programs, like 
+.I ftp(1)
+and
+.I telnet(1)
+to communicate over the network.  (This description assumes the reader is
+familiar with ARPANET type communications protocols.)
+.SH ESTABLISHING CONNECTIONS
+To establish a connection via TCP or IP, or to communicate with raw packets,
+the 
+.I open(2)
+call is given, with the usual mode argument replaced by a pointer to a
+connection structure, defined in
+.I /usr/include/con.h.
+The 
+.I c_mode
+field of this structure specifies what type of connection is desired
+(TCP, IP, or RAW), and whether or not the connection is to be active 
+(specifying a specific foreign host address), or passive (with no foreign
+address, implying that the connection will be established when any foreign
+process tries to communicate with the opener).  
+This field also specifies other attributes of raw connections (see, RAW
+CONNECTIONS).
+.PP
+The
+.I c_sbufs
+and 
+.I c_rbufs
+fields specify buffer allocations for the send and receive sides of the
+connection, respectively.  If either value is zero, the default allocation 
+will be used for that direction
+(currently 1K bytes).  The user can request up to 8K bytes each for send
+and receive directions by varying these parameters between 1 and 8.  
+.PP
+For IP 
+and RAW connections, the
+.I c_hi
+and
+.I c_lo
+fields specify a range of IP protocol numbers or local net dispatch numbers
+(e.g., ARPANET link numbers) to watch for (see, RAW CONNECTIONS).  
+.PP
+The
+.I c_timeo
+parameter specifies a length of time in seconds to wait for connection
+establishment before aborting (this does not apply to passive opens).  If
+the field is zero, the default of 30 seconds is used.  
+.PP
+The remaining fields
+specify local, and foreign ports for TCP, and foreign and local host addresses 
+in network address format (see
+.I libnet(3)).
+The local port may be zero, in which case TCP assigns a unique port number to
+the connection.  The foreign port and host address may only be zero for a
+passive open.
+The local host address may be zero, in which case a default local address
+is chosen by the software.  On machines with multiple network interfaces
+(and network addresses), this field may be used to specify which
+interface/address to use.  It is an error to specify an unsupported local
+address.
+.SH READING AND WRITING
+If the open succeeds, a file descriptor is returned which may be used in
+subsequent reads and writes (see,
+.I read(2), write(2)).
+Reads and writes work as usual with a few
+exceptions.  A read may return with error condition ENETSTAT, which indicates
+that some exceptional condition has been detected.  
+Further status may be determined with
+.I ioctl(2).
+(see, NETWORK STATUS).  If the condition is non-fatal, the read may be
+re-issued.  Reads may return less data than requested, 
+and will block if there is no data for the user.  Writes block if
+the amount of send buffer resources for the connection is exceeded.  
+Reads will return zero only when the foreign peer has closed the connection and
+there is no remaining data to return to the user.  
+.PP
+In addition to normal TCP reads and writes, the user may wish to indicate EOL
+and URGENT data on writes and receive notification of URGENT data sent by the
+foreign peer.  EOL and URGENT are enabled by issueing the NETSETE or NETSETU
+ioctl calls.
+Once set, EOL is sent at the last byte of each subsequent write.  Similarly,
+the URGENT pointer is set to start at the first byte of the next write, and
+ends with the first byte sent after URGENT mode is disabled.  These modes are
+disabled by the NETRSETE and NETRSETU ioctl calls.  URGENT data is
+indicated by signal SIGURG when the first byte is received.  This signal is
+normally ignored.  (A status flag is also set in the presence of urgent data.)
+.SH CLOSING CONNECTIONS 
+Normally, the 
+.I close(2)
+call is used to close a TCP, IP, or RAW connection.  In each case, it indicates
+that the user will send or receive no more data.  For TCP connections, close
+initiates the connection closing protocol, though it returns immediately.
+Thus, the internal connection structures persist until the connection has
+reached the CLOSED state.  For IP and RAW connections, the close is immediate
+and deletes all internal structures.  
+.PP
+In addition to close for TCP connections, there is an ioctl call, NETCLOSE,
+which indicates that the local connection will send no more data, but is still
+able to receive data from the foreign peer.  In this case, subsequent writes
+are illegal and will terminate with errors, but subsequent reads will work
+until the connection is closed by the foreign peer.
+.SH RAW CONNECTIONS
+.PP
+Raw IP and local network protocol packets may be sent and received by
+specifying CONIP or CONRAW in the mode field of the open call.  These types
+of opens do not set up connections in the sense of TCP opens (i.e., they do
+not cause communication of a connection opening protocol), but the
+resulting channel will be referred to as a "connection" for the sake of
+brevity.  
+.PP
+To send raw IP or local network protocol packets, a connection is opened
+and writes are issued on the resulting file descriptor.  The user may
+specify parameters in the open call (such as destination host address, link
+or protocol number) that are used by the software to construct leaders for
+the data (RAWCOMP mode), or he may opt to supply the leaders (RAWASIS
+mode).  A third option exists for IP connections, where the system fills in
+the checksum field in the supplied leader (RAWVER mode).  In each case, one
+packet is sent out for each write.  Writes do not block, and return as soon
+as the packet has been queued for sending to the local network.  If for
+some reason, the packet cannot be sent (the selected network interface is
+unavailable), an error will be returned.
+.PP
+To receive raw IP or local network protocol packets, the user specifies a
+range of link or protocol numbers and a foreign and local host address in
+the open call.  The range is specified in the
+.I c_hi
+and
+.I c_lo
+fields.  The range must be unique (i.e., may not overlap other protocol or
+link numbers in use), and 
+.I c_lo 
+must be less than or equal to 
+.I c_hi, 
+or an
+ENETRNG error results.  If the foreign or local host addresses are
+specified, only messages in the specified range with the corresponding
+source and/or destination address are queued for the user.  If the
+addresses are zero, all messages falling into the specified range are
+returned.  Reads return no more than one packet, though they may return
+less if a length shorter than the packet length is specified (subsequent
+reads will return the remainder of the packet).  The entire packet,
+including the header is returned.  If the read buffer limit is exceeded,
+subsequent incoming messages in the specified range will be dropped.  Reads
+block if there is no data to satisfy the request.  The user may optionally
+receive ICMP or local network protocol error and control messages
+associated with the range by specifying RAWERR mode in the open call.  
+.SH NETWORK STATUS
+There are several 
+.I ioctl(2)
+calls available for receiving network status information or initiating certain
+modes or functions.  Most of these calls have been described above.  The status
+call, NETGETS, takes a status buffer pointer, which points to a netstate
+structure, illustrated above, which is filled in by the call.  
+.PP
+To summarize, the various ioctl calls are:
+.IP NETGETS 10
+Return network status information to the structure pointed at by third argument
+of ioctl.
+.IP NETSETU 10
+Set urgent mode starting at next byte written (TCP only).
+.IP NETRSETU 10
+Reset urgent mode, urgent pointer ends at last byte written (TCP only).
+.IP NETSETE 10
+Set EOL mode, send EOL at last byte of each subsequent write (TCP only).
+.IP NETRSETE 10
+Terminate EOL mode (TCP only).
+.IP NETCLOSE 10
+Start TCP connection close.  User can continue to receive data (TCP only).
+.IP NETABORT 10
+Abort TCP connection.  Foreign peer is reset and no more data may be sent or
+received (TCP only).
+.IP NETTCPOPT 10
+Set up an IP option string for a TCP connection.  The third parameter is a
+pointer to a structure containing a pointer to the option string and the
+length of the option string in bytes.   The option string is appended to the IP
+leader of each subsequent TCP segment sent.  If the third parameter is zero, the
+previous options are cancelled and no options will be sent on subsequent
+packets.  The options are
+specified in the Internet Protocol description, and are sent as is, with no
+verification.  The option length may not exceed 40 bytes. (TCP only).
+.PP
+In addition, there is another class of ioctl calls that are associated with
+network control functions and not with any specific connection.  These calls
+may be issued from normal TCP, IP, or RAW connections.  There is also a special
+control only connection which may be opened (with CONCTL passed to open, all
+other fields are ignored).  This type of connection exists solely for the
+purpose of issuing control ioctls without involving any network resources.  The
+control ioctls are:
+.IP NETSETD 10
+Reset the debugging log to the file name pointed at by the third
+argument.  The file must already exist.
+If the argument is zero, turn off debug logging (see, DEBUGGING). Only the
+super-user may issue this call.
+.IP NETRESET 10
+Cause the TCP connection specified by the tcb address given as the third
+argument to be reset as if a connection clear request had been received from
+the network.  Only the super-user may issue this call.
+.IP NETDEBUG 10
+Toggle the debugging flag for the TCP connection specified by the TCB address
+given as the third argument.
+.IP NETGINIT 10
+Cause the gateway initialization file
+.I /etc/net/gateway
+to be read by the kernel, and the internal gateway forwarding table to be
+reinitialized.  This file is in binary format and is generated from an
+ASCII gateway table with
+.I gateway(1).
+.SH DEBUGGING
+.IX "\*itrpt\*r usage"
+.IX "\*i/etc/net/tcpdebug\*r"
+.IX "network debugging"
+The network software enables certain trace information to be recorded for TCP
+connections.  This information is logged in a single debugging log file.  To
+enable this feature, the CONDEBUG bit in the 
+.I c_mode 
+field of the open connection parameter structure must be set, or the NETDEBUG
+ioctl call must issued.  The default debugging log is 
+.I /etc/net/tcpdebug.
+This may be changed or the feature may be disabled system wide with the NETSETD
+ioctl call.  Only the super-user may do this.  The format of the debugging
+information is several bytes of binary data per TCP transaction.  The log may
+be printed in readable form with
+.I trpt(1).
+.SH DIAGNOSTICS
+The following system error codes may be returned by network system calls:
+.IP ENETSTAT 10
+(35) Network status available (not a fatal error, see READS AND WRITES).
+.IP ENETDOWN 10
+(36) Open failed because specified network interface is unavailable.
+.IP ENETCON 10
+(37) Open failed because there were too many connections.
+.IP ENETBUF 10
+(38) Open, write, or ioctl failed because there was insufficient network 
+buffer space.  
+.IP ENETPARM 10
+(39) Network parameter error.  On open, the mode field of the connection 
+parameter structure is bad.  On ioctl, an unrecognized network ioctl type 
+was specified.
+.IP ENETRNG 10
+(40) IP or RAW open failed because the protocol or dispatch number was out of
+range or already in use.  TCP open failed because the user tried to open an
+already existing connection (i.e., one with the identical foreign host address
+and local and foreign ports).  NETDEBUG or NETRESET ioctls failed because the
+connection with the specified TCB could not be found.
+.IP ENETDED 10
+(41) TCP open failed because the foreign host is dead.
+.IP ERAWBAD 10
+(42) IP or RAW write failed, packet was not sent.
+.IP ENETERR 10
+(43) Open failed for unknown reason.  TCP read or write was attempted on a 
+closed connection.
+.IP ENETREF 10
+(44) TCP open failed because the destination host refused the connection.
+.IP ENETUNR 10
+(45) TCP open failed because the destination host was unreachable.
+.IP ENETTIM 10
+(46) TCP open failed because the foreign host did not respond on the specified
+socket within the timeout period defined in the open request.
+.SH FILES
+/dev/net/net
+.br
+/etc/net/tcpdebug
+.br
+/etc/net/gateway
+.SH SEE ALSO
+ftp(1), gateway(1), telnet(1), trpt(1), read(2), write(2), open(2), close(2), 
+ioctl(2), libnet(3)
+.sp
+R.F. Gurwitz, 
+.I VAX-UNIX Networking Support Project Implementation Description,
+DARPA Information Processing Techniques Office, IEN 168, January, 1981.
+.sp
+J. Postel (ed.), 
+.I DoD Standard Internet Protocol,
+DARPA Information Processing Techniques Office, RFC 791, September, 1981.
+.sp
+J. Postel (ed.),
+.I DoD Standard Transmission Control Protocol,
+DARPA Information Processing Techniques Office, RFC 793, September, 1981.

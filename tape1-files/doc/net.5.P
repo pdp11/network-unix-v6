@@ -1,0 +1,520 @@
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+_N_A_M_E
+     tcp, ip, rawnet - internet networking software
+
+_S_Y_N_O_P_S_I_S
+     _o_p_e_n ("/_d_e_v/_n_e_t/_n_e_t", _n_c_o_n);
+
+     _s_t_r_u_c_t _c_o_n *_n_c_o_n;
+
+     struct lhost {                  /* net library format internet address */
+            unsigned char l_hoi;            /* host on imp */
+            unsigned char l_net;            /* network */
+            n_short l_imp;                  /* imp */
+     };
+                                        /* c_mode field definitions */
+     struct con {                    /* user connection structure */
+            unsigned char c_mode;           /* mode 0-passive 1-active (see flags) */
+            unsigned char c_sbufs;          /* # send buffers to use */
+            unsigned char c_rbufs;          /* # rcv buffers to use */
+            unsigned char c_prec;           /* precedence */
+     #define c_lo c_prec                     /* low raw link or proto # */
+            unsigned char c_sec;            /* security level */
+     #define c_hi c_sec                      /* hi raw link or proto # */
+            unsigned char c_compt;          /* compartment */
+            unsigned char c_timeo;          /* tcp open timeout */
+            unsigned char c_x;              /* (unused) */
+            unsigned short c_lport;         /* local port */
+            unsigned short c_fport;         /* foreign port */
+            struct lhost c_con;             /* foreign socket */
+     };
+
+     struct netstate {               /* network status structure */
+            unsigned char n_lolink;         /* low link no. in range (IP, RAW) */
+            unsigned char n_hilink;         /* high link no. in range (IP, RAW) */
+            unsigned char n_snd;            /* # send bufs allocated */
+            unsigned char n_rcv;            /* # receive bufs allocated */
+            unsigned char n_ssize;          /* # bufs on send buffer */
+            unsigned char n_rsize;          /* # bufs on receive buffer */
+            unsigned char n_state;          /* state of this connection */
+            unsigned char n_flags;          /* misc. flags (see below) */
+            unsigned short n_lport;         /* local port */
+            unsigned short n_fport;         /* foreign port */
+            struct lhost n_con;             /* foreign socket */
+     };
+
+     #define CONACT  1                       /* active connection */
+     #define CONTCP  2                       /* open a tcp connection */
+     #define CONIP   4                       /* open a raw ip connection */
+     #define CONRAW  8                       /* open a raw local net connection */
+     #define CONCTL  16                      /* open a control port (no conn) */
+     #define CONDEBUG 128               /* turn on debugging info */
+
+
+
+
+Printed 9/1/81                                                  1
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+                                        /* net ioctl definitions */
+     #define NETGETS 1                       /* get status */
+     #define NETSETD 2                       /* set debugging info */
+     #define NETSETU 3                       /* set urgent mode */
+     #define NETRSETU 4                      /* reset urgent mode */
+     #define NETSETE 5                       /* set EOL mode */
+     #define NETRSETE 6                      /* reset EOL mode */
+     #define NETCLOSE 7                      /* initiate tcp close */
+     #define NETABORT 8                      /* initiate tcp abort */
+     #define NETRESET 9                      /* forced tcp connection reset */
+     #define NETDEBUG 10                     /* toggle debugging flag */
+
+     #define SIGURG 16               /* urgent signal */
+
+     #ifndef KERNEL                           /* n_flags field definitions */
+
+     #define UEOL    0001                    /* EOL sent */
+     #define UURG    0002                    /* urgent data sent */
+     #define UDEBUG  0004                    /* turn on debugging info recording */
+     #define ULOCK   0010                    /* receive buffer locked */
+     #define UTCP    0020                    /* this is a TCP connection */
+     #define UIP     0040                    /* this is a raw IP connection */
+     #define URAW    0100                    /* this is a raw 1822 connection */
+     #define ULISTEN 0200                    /* awaiting a connection */
+     #define UCTL    0400                    /* this is a control port only */
+
+                                        /* n_state field definitions */
+     #define UCLOSED 0000                    /* connection closed */
+     #define UCLSERR 0001                    /* error -- connection closing */
+     #define UABORT  0002                    /* connection aborted */
+     #define UINTIMO 0004                    /* open failed -- init timeout */
+     #define URXTIMO 0010                    /* retransmit too long timeout */
+     #define URESET  0020                    /* connection aborted due to reset */
+     #define UOPERR  0040                    /* open failed -- not enough buffers */
+     #define UURGENT 0100                    /* urgent data received */
+     #define UNETDWN 0200                    /* connection aborted due to net */
+
+     #endif KERNEL
+
+_D_E_S_C_R_I_P_T_I_O_N
+     The special file /_d_e_v/_n_e_t/_n_e_t is used to access ARPANET type
+     packet-switched  networks  via  the  DoD  standard host-host
+     Internetworking   Protocols,   _T_C_P   (Transmission   Control
+     Protocol),  and  _I_P  (Internet  Protocol).   It  also allows
+     communication over the local network(s) to which the  system
+     is  connected  with "raw" packets, enabling user software to
+     do its own communications processing.  Access to the network
+     at this level is the most direct form of use.  It is assumed
+     that most users will use  higher  level  protocol  programs,
+     like  _f_t_p(_1)  and _t_e_l_n_e_t(_1) to communicate over the network.
+     (This  description  assumes  the  reader  is  familiar  with
+
+
+
+Printed 9/1/81                                                  2
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+     ARPANET type communications protocols.)
+
+_E_S_T_A_B_L_I_S_H_I_N_G _C_O_N_N_E_C_T_I_O_N_S
+     To establish a connection via TCP or IP, or  to  communicate
+     with  raw packets, the _o_p_e_n(_2) call is given, with the usual
+     mode  argument  replaced  by  a  pointer  to  a   connection
+     structure,  defined  in /_u_s_r/_i_n_c_l_u_d_e/_c_o_n._h. The _c__m_o_d_e field
+     of this structure  specifies  what  type  of  connection  is
+     desired (TCP, IP, or RAW), and whether or not the connection
+     is  to  be  active  (specifying  a  specific  foreign   host
+     address), or passive (with no foreign address, implying that
+     the connection will be established when any foreign  process
+     tries  to  communicate  with  the  opener).  This field also
+     specifies other attributes  of  raw  connections  (see,  RAW
+     CONNECTIONS).
+
+     The _c__s_b_u_f_s and _c__r_b_u_f_s fields  specify  buffer  allocations
+     for   the   send   and  receive  sides  of  the  connection,
+     respectively.   If  either  value  is  zero,   the   default
+     allocation  will  be  used  for that direction (currently 1K
+     bytes).  The user can request up to 8K bytes each  for  send
+     and receive directions by varying these parameters between 1
+     and 8.
+
+     For IP and RAW connections, the _c__h_i and _c__l_o fields specify
+     a range of IP protocol numbers or local net dispatch numbers
+     (e.g.,  ARPANET  link  numbers)  to  watch  for  (see,   RAW
+     CONNECTIONS).
+
+     The _c__t_i_m_e_o parameter specifies a length of time in  seconds
+     to  wait  for connection establishment before aborting (this
+     does not apply to passive opens).  If the field is zero, the
+     default of 30 seconds is used.
+
+     The remaining fields specify local, and  foreign  ports  for
+     TCP, and foreign and local host addresses in network address
+     format (see _l_i_b_n_e_t(_3)). The local port may be zero, in which
+     case  TCP  assigns  a  unique port number to the connection.
+     The foreign port and host address may only  be  zero  for  a
+     passive  open.  The local host address may be zero, in which
+     case a default local address is chosen by the software.   On
+     machines  with  multiple  network  interfaces  (and  network
+     addresses),  this  field  may  be  used  to  specify   which
+     interface/address  to  use.   It  is  an error to specify an
+     unsupported local address.
+
+_R_E_A_D_I_N_G _A_N_D _W_R_I_T_I_N_G
+     If the open succeeds, a file descriptor  is  returned  which
+     may  be  used  in subsequent reads and writes (see, _r_e_a_d(_2),
+     _w_r_i_t_e(_2)). Reads  and  writes  work  as  usual  with  a  few
+     exceptions.    A   read  may  return  with  error  condition
+
+
+
+Printed 9/1/81                                                  3
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+     ENETSTAT, which indicates that  some  exceptional  condition
+     has  been  detected.  Further  status may be determined with
+     _i_o_c_t_l(_2). (see, NETWORK STATUS).  If the condition  is  non-
+     fatal,  the  read  may  be re-issued.  Reads may return less
+     data than requested, and will block if there is no data  for
+     the  user.   Writes  block  if  the  amount  of  send buffer
+     resources for the connection is exceeded. Reads will  return
+     zero  only  when  the foreign peer has closed the connection
+     and there is no remaining data to return to the user.
+
+     In addition to normal TCP reads and  writes,  the  user  may
+     wish  to  indicate EOL and URGENT data on writes and receive
+     notification of URGENT data sent by the foreign  peer.   EOL
+     and  URGENT  are  enabled by issueing the NETSETE or NETSETU
+     ioctl calls.  Once set, EOL is sent at the last byte of each
+     subsequent  write.   Similarly, the URGENT pointer is set to
+     start at the first byte of the next write, and ends with the
+     first  byte sent after URGENT mode is disabled.  These modes
+     are disabled by  the  NETRSETE  and  NETRSETU  ioctl  calls.
+     URGENT  data  is  indicated  by signal SIGURG when the first
+     byte is received.  This  signal  is  normally  ignored.   (A
+     status flag is also set in the presence of urgent data.)
+
+_C_L_O_S_I_N_G _C_O_N_N_E_C_T_I_O_N_S
+     Normally, the _c_l_o_s_e(_2) call is used to close a TCP,  IP,  or
+     RAW  connection.   In  each case, it indicates that the user
+     will send or receive no more  data.   For  TCP  connections,
+     close  initiates  the connection closing protocol, though it
+     returns  immediately.    Thus,   the   internal   connection
+     structures  persist  until  the  connection  has reached the
+     CLOSED state.  For IP and  RAW  connections,  the  close  is
+     immediate and deletes all internal structures.
+
+     In addition to close for TCP connections, there is an  ioctl
+     call,  NETCLOSE,  which  indicates that the local connection
+     will send no more data, but is still able  to  receive  data
+     from  the foreign peer.  In this case, subsequent writes are
+     illegal and will terminate with errors, but subsequent reads
+     will  work  until  the  connection  is closed by the foreign
+     peer.
+
+_R_A_W _C_O_N_N_E_C_T_I_O_N_S
+     Raw IP and local network protocol packets may  be  sent  and
+     received  by specifying CONIP or CONRAW in the mode field of
+     the  open  call.   These  types  of  opens  do  not  set  up
+     connections  in  the  sense  of TCP opens (i.e., they do not
+     cause communication of a connection opening  protocol),  but
+     the  resulting channel will be referred to as a "connection"
+     for the sake of brevity.
+
+
+
+
+
+Printed 9/1/81                                                  4
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+     To  send  raw  IP  or  local  network  protocol  packets,  a
+     connection  is opened and writes are issued on the resulting
+     file descriptor.  The user may  specify  parameters  in  the
+     open  call  (such  as  destination  host  address,  link  or
+     protocol number) that are used by the software to  construct
+     leaders for the data (RAWCOMP mode), or he may opt to supply
+     the leaders (RAWASIS mode).  A third option  exists  for  IP
+     connections, where the system fills in the checksum field in
+     the supplied leader (RAWVER mode).  In each case, one packet
+     is sent out for each write.  Writes do not block, and return
+     as soon as the packet has been queued  for  sending  to  the
+     local  network.   If  for  some reason, the packet cannot be
+     sent (the selected network  interface  is  unavailable),  an
+     error will be returned.
+
+     To receive raw IP or local  network  protocol  packets,  the
+     user  specifies  a  range  of link or protocol numbers and a
+     foreign and local host address in the open call.  The  range
+     is specified in the _c__h_i and _c__l_o fields.  The range must be
+     unique (i.e., may not overlap other protocol or link numbers
+     in  use), and _c__l_o must be less than or equal to _c__h_i, or an
+     ENETRNG  error  results.   If  the  foreign  or  local  host
+     addresses  are  specified,  only  messages  in the specified
+     range  with  the  corresponding  source  and/or  destination
+     address are queued for the user.  If the addresses are zero,
+     all messages falling into the specified range are  returned.
+     Reads return no more than one packet, though they may return
+     less if a length shorter than the packet length is specified
+     (subsequent  reads will return the remainder of the packet).
+     The entire packet, including the header is returned.  If the
+     read  buffer limit is exceeded, subsequent incoming messages
+     in the specified range will  be  dropped.   Reads  block  if
+     there  is  no  data  to  satisfy  the request.  The user may
+     optionally receive ICMP or local network protocol error  and
+     control  messages  associated  with  the range by specifying
+     RAWERR mode in the open call.
+
+_N_E_T_W_O_R_K _S_T_A_T_U_S
+     There are several _i_o_c_t_l(_2)  calls  available  for  receiving
+     network  status  information  or initiating certain modes or
+     functions.  Most of these calls have been  described  above.
+     The  status  call,  NETGETS,  takes a status buffer pointer,
+     which points to a  netstate  structure,  illustrated  above,
+     which is filled in by the call.
+
+     To summarize, the various ioctl calls are:
+
+     NETGETS   Return network status information to the structure
+               pointed at by third argument of ioctl.
+
+     NETSETU   Set urgent mode starting at next byte written (TCP
+
+
+
+Printed 9/1/81                                                  5
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+               only).
+
+     NETRSETU  Reset urgent mode, urgent  pointer  ends  at  last
+               byte written (TCP only).
+
+     NETSETE   Set EOL mode,  send  EOL  at  last  byte  of  each
+               subsequent write (TCP only).
+
+     NETRSETE  Terminate EOL mode (TCP only).
+
+     NETCLOSE  Start TCP connection close.  User can continue  to
+               receive data (TCP only).
+
+     NETABORT  Abort TCP connection.  Foreign peer is  reset  and
+               no more data may be sent or received (TCP only).
+
+     NETTCPOPT Set up an IP option string for a  TCP  connection.
+               The  third  parameter  is a pointer to a structure
+               containing a pointer to the option string and  the
+               length of the option string in bytes.   The option
+               string is  appended  to  the  IP  leader  of  each
+               subsequent   TCP   segment  sent.   If  the  third
+               parameter  is  zero,  the  previous  options   are
+               cancelled   and   no   options  will  be  sent  on
+               subsequent packets.  The options are specified  in
+               the Internet Protocol description, and are sent as
+               is, with no verification.  The option  length  may
+               not exceed 40 bytes. (TCP only).
+
+     In addition, there is another class of ioctl calls that  are
+     associated  with  network control functions and not with any
+     specific connection.  These calls may be issued from  normal
+     TCP,  IP,  or  RAW  connections.   There  is  also a special
+     control only connection which may  be  opened  (with  CONCTL
+     passed to open, all other fields are ignored).  This type of
+     connection exists solely for the purpose of issuing  control
+     ioctls without involving any network resources.  The control
+     ioctls are:
+
+     NETSETD   Reset the debugging log to the file  name  pointed
+               at  by  the third argument.  The file must already
+               exist.  If the argument is zero,  turn  off  debug
+               logging  (see, DEBUGGING). Only the super-user may
+               issue this call.
+
+     NETRESET  Cause the TCP  connection  specified  by  the  tcb
+               address given as the third argument to be reset as
+               if a connection clear request  had  been  received
+               from  the  network.  Only the super-user may issue
+               this call.
+
+
+
+
+Printed 9/1/81                                                  6
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+     NETDEBUG  Toggle the debugging flag for the  TCP  connection
+               specified  by  the  TCB address given as the third
+               argument.
+
+     NETGINIT  Cause    the    gateway    initialization     file
+               /_e_t_c/_n_e_t/_g_a_t_e_w_a_y to be read by the kernel, and the
+               internal   gateway   forwarding   table   to    be
+               reinitialized.   This file is in binary format and
+               is generated from  an  ASCII  gateway  table  with
+               _g_a_t_e_w_a_y(_1).
+
+_D_E_B_U_G_G_I_N_G
+     The network software enables certain trace information to be
+     recorded for TCP connections.  This information is logged in
+     a single debugging log file.  To enable  this  feature,  the
+     CONDEBUG  bit  in  the  _c__m_o_d_e  field of the open connection
+     parameter structure must be set, or the NETDEBUG ioctl  call
+     must    issued.     The    default    debugging    log    is
+     /_e_t_c/_n_e_t/_t_c_p_d_e_b_u_g. This may be changed or the feature may be
+     disabled  system wide with the NETSETD ioctl call.  Only the
+     super-user  may  do  this.   The  format  of  the  debugging
+     information   is  several  bytes  of  binary  data  per  TCP
+     transaction.  The log may be printed in readable  form  with
+     _t_r_p_t(_1).
+
+_D_I_A_G_N_O_S_T_I_C_S
+     The following system error codes may be returned by  network
+     system calls:
+
+     ENETSTAT  (35) Network status available (not a fatal  error,
+               see READS AND WRITES).
+
+     ENETDWN   (36)  Open  failed   because   specified   network
+               interface is unavailable.
+
+     ENETCON   (37) Open  failed  because  there  were  too  many
+               connections or different foreign hosts.
+
+     ENETBUF   (38) Open failed because there was no more network
+               buffer space.
+
+     ENETERR   (39) Fatal error from network protocol  processor.
+               Usually  occurs when issuing a read or write after
+               the connections is half-closed  or  reset;  or  on
+               open, if the connection mode bits are invalid.
+
+     ENETRNG   (40) IP or RAW open failed because the protocol or
+               dispatch  number  was  out  of range or already in
+               use.  TCP open failed because the  user  tried  to
+               open  an  already  existing  connection (i.e., one
+               with the identical foreign host address and  local
+
+
+
+Printed 9/1/81                                                  7
+
+
+
+
+
+
+NET(5)              UNIX Programmer's Manual               NET(5)
+
+
+
+               and  foreign  ports).  NETDEBUG or NETRESET ioctls
+               failed because the connection with  the  specified
+               TCB could not be found.
+
+     ENETOPN   (41) TCP open failed because the foreign host  did
+               not  respond  on  the  specified socket within the
+               timeout period defined in the open request.
+
+     ERAWBAD   (42) IP or RAW write failed, packet was not sent.
+
+_F_I_L_E_S
+     /dev/net/net
+     /etc/net/tcpdebug
+     /etc/net/gateway
+
+_S_E_E _A_L_S_O
+     ftp(1), gateway(1), telnet(1), trpt(1),  read(2),  write(2),
+     open(2), close(2), ioctl(2), libnet(3)
+
+     R.F.   Gurwitz,   _V_A_X-_U_N_I_X   _N_e_t_w_o_r_k_i_n_g   _S_u_p_p_o_r_t    _P_r_o_j_e_c_t
+     _I_m_p_l_e_m_e_n_t_a_t_i_o_n  _D_e_s_c_r_i_p_t_i_o_n,  DARPA  Information  Processing
+     Techniques Office, IEN 168, January, 1981.
+
+     J. Postel  (ed.),  _D_o_D  _S_t_a_n_d_a_r_d  _I_n_t_e_r_n_e_t  _P_r_o_t_o_c_o_l,  DARPA
+     Information  Processing Techniques Office, IEN 128, January,
+     1980.
+
+     J. Postel (ed.), _D_o_D _S_t_a_n_d_a_r_d _T_r_a_n_s_m_i_s_s_i_o_n _C_o_n_t_r_o_l _P_r_o_t_o_c_o_l,
+     DARPA  Information  Processing  Techniques  Office, IEN 129,
+     January, 1980.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Printed 9/1/81                                                  8
+
+
+

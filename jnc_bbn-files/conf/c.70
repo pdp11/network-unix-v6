@@ -1,0 +1,76 @@
+#
+/*
+ *      unix configuration table
+ *
+ *      Modified 4/9/79 BBN(dan): awt and capac routines moved into cdevsw.
+ */
+
+#include "../h/param.h"
+/* UNIX Identification and Configuration information */
+#define ED  6
+#define VER 1
+#define MAJ 3
+#define MIN 3
+
+int unixid  {( (ED<<12) | (VER<<8)|(MAJ<<4)|MIN)};
+char id[] "~|^`UNIX V6.1:3.3 bbn root=/dev/hps00 swap=/dev/hps10\n";
+
+/* device drivers */
+
+int     (*bdevsw[])()
+{
+        &nodev,         &nodev,         &nodev,         0,      /* rk */
+        0
+};
+
+int     (*cdevsw[])()
+{
+/* 0 console */ &klopen,   &klclose,  &klread,   &klwrite,  &klsgtty,  &klttyawt, &klttycap,
+/* 1 pc */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/* 2 lp */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/* 3 dc */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/* 4 dh */      &dhopen,   &dhclose,  &dhread,   &dhwrite,  &dhsgtty,  &dhttyawt, &dhttycap,
+/* 5 dp */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/* 6 dj */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/* 7 dn */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/* 8 mem */     &nulldev,  &nulldev,  &mmread,   &mmwrite,  &nodev,    &nocap,    &nullcap,
+/* 9 rk */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/*10 rf */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/*11 rp */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/*12 tm */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/*13 hs */      &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/*14 hp */      &nulldev,  &nulldev,  &hpread,   &hpwrite,  &nodev,    &nocap,    &nocap,
+/*15 ht-800 */  &htopen,   &htclose,  &htread,   &htwrite,  &nodev,    &nocap,    &nocap,
+/*16 ht-1600 */ &htopen,   &htclose,  &htread,   &htwrite,  &nodev,    &nocap,    &nocap,
+/*17 dz */      &dzopen,   &dzclose,  &dzread,   &dzwrite,  &dzsgtty,  &dzttyawt, &dzttycap,
+/*18 ports  */  &portopen, &nodev,    &portread, &portwrite,&portstty, &portawt,  &portcap,
+
+#ifndef NCP     /* jsq bbn 10/19/78 */
+/*19 NCP  */    &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+#endif NCP
+#ifdef  NCP     /* jsq bbn 10/19/78 */
+/*19 NCP  */    &ncpopen,  &ncpclose, &ncpread,  &ncpwrite, &nodev,    &nocap,    &nocap,
+#endif NCP
+/*20 pty ctl */ &ptcopen,  &ptcclose, &ptcread,  &ptcwrite, &ptcsgtty, &ptcawt,   &ptccap,
+/*21 pty slv */ &ptsopen,  &ptsclose, &ptsread,  &ptswrite, &ptssgtty, &ptsawt,   &ptscap,
+
+/*22 genisco */ &gnopen,   &gnclose,  &gnread,   &gnwrite,  &gnsgty,   &nocap,    &nocap,
+
+#ifdef RMI
+/*23 rawnet */  &rwkopen,  &rwkclose, &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+#endif RMI
+#ifndef RMI
+/*23 rawnet */  &nodev,    &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+#endif RMI
+
+/*24 tty */     &ctyopen,  &nodev,    &nodev,    &nodev,    &nodev,    &nocap,    &nocap,
+/*25 xtty */    &xtcopen,  &xtcclose, &xtcread,  &xtcwrite, &xtcsgtty, &xtcawt, &xtccap,
+/*26 pty slv */ &xtsopen,  &xtsclose, &xtsread,  &xtswrite, &xtssgtty, &xtsawt, &xtscap,
+        0
+};
+
+int     portdev {(18<<8)|0};    /* For port.c */
+int     rootdev {(6<<8)|9};     /* hps00 */
+int     swapdev {(6<<8)|25};    /* hps10 */
+int     swplo   7614;   /* cannot be zero */
+int     nswap   2000;

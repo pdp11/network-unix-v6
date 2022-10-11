@@ -1,0 +1,91 @@
+.TH MKGATE 1
+.SH NAME
+mkgate \- convert ASCII gateway file to binary
+.SH SYNOPSIS
+.B mkgate
+[
+.B \-i
+infile
+][
+.B \-o
+outfile
+]
+.sp
+.B netginit
+.SH DESCRIPTION
+.I Mkgate
+translates a file containing ASCII network/gateway correspondence entries 
+into a binary format file that can be read by the network kernel code to
+initialize its internal gateway table.  Each entry in the ASCII input file
+consists of a line of the following format:
+.sp
+[<locnet> 
+.B -> 
+<fornet> 
+.B via 
+<gateway> 
+[
+.B flags 
+<flags>]] [
+.B ; 
+<comment>]
+.sp
+where
+.I locnet
+and 
+.I fornet
+are network names of the local and foreign networks, 
+.I gateway
+is a host name (or address), and
+.I flags
+are an optional string of hexadecimal flag digits.  A line may contain a
+semi-colon, after which all following text on the line is ignored.  A
+sample gateway entry looks like:
+.sp
+.in 5
+arpanet
+.B ->
+rccnet
+.B via
+bbn-ig
+.B flags
+2 
+.B ;
+a sample entry.
+.in 0
+.LP
+The default input file is 
+.I /etc/net/gateway,
+the default output,
+.I /etc/net/gateway.bin.
+These may be overridden with the 
+.B -i
+and
+.B -o
+options.
+.LP
+The gateway file, 
+.I /etc/net/gateway.bin
+is read at boot time by the network software.  The internal gateway table
+may be reinitialized at any time by issuing the
+.I netginit
+command.
+.SH FILES
+/etc/net/gateway (default binary input file)
+.br
+/etc/net/gateway.bin (default binary output file)
+.br
+/etc/net/gateway.bin~ (backup of old gateway.bin)
+.SH SEE ALSO
+net(5)
+.SH DIAGNOSTICS
+.I mkgate
+reports entry syntax errors and unknown gateway addresses and network
+names.
+.sp
+.I netginit
+returns -1 if the gateway table could not be initialized.  Unrecognizable
+or inconsistent entries are flagged by error messages on the console.
+
+
+

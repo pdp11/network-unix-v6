@@ -1,0 +1,346 @@
+#
+#include "../h/param.h"
+#include "../h/user.h"
+#include "../h/systm.h"
+#include "../h/proc.h"
+#include "../h/text.h"
+#include "../h/inode.h"
+#include "../h/seg.h"
+
+#define	CLOCK1	0177546
+#define	CLOCK2	0172540
+/*
+ * Icode is the octal bootstrap
+ * program executed in user mode
+ * to bring up the system.
+ */
+int	icode[]
+{
+	0104413,	/* sys exec; init; initp */
+	0000014,
+	0000010,
+	0000777,	/* br . */
+	0000014,	/* initp: init; 0 */
+	0000000,
+	0062457,	/* init: </etc/init\0> */
+	0061564,
+	0064457,
+	0064556,
+	0000164,
+};
+
+/*
+ * Initialization code.
+ * Called from m40.s or m45.s as
+ * soon as a stack and segmentation
+ * have been established.
+ * Functions:
+ *	clear and free user core
+ *	find which clock is configured
+ *	hand craft 0th process
+ *	call all initialization routines
+ *	fork - process 0 to schedule
+ *	     - process 1 execute bootstrap
+ *
+ * panic: no clock -- neither clock responds
+ * loop at loc 6 in user mode -- /etc/init
+ *	cannot be executed.
+ */
+main()
+{
+	extern schar;
+	register i, *p;
+	register struct proc *cp;
+
+	/*
+	 * zero and free all of core
+	 */
+
+	printf("BBN-UNIX startup.\n");
+	updlock = 0;
+
+	/* BUFMOD code reserves NSBUF*512 bytes of buffers in
+	 * non-kernel space (NKS) for use as system buffers. Initially
+	 * these NKS system buffers will be used only by
+	 * the network software. 4/12/79 S.Y. Chiu BBN
+	 */
+#ifdef BUFMOD
+	i = *ka6 + USIZE + NSBUF*(512>>6);
+#endif BUFMOD
+
+#ifndef BUFMOD
+	i = *ka6 + USIZE;
+#endif BUFMOD
+
+	UISD->r[0] = 077406;
+	for(;;) {
+		UISA->r[0] = i;
+		if(fuibyte(0) < 0)
+			break;
+		clearseg(i);
+		maxmem++;
+		mfree(coremap, 1, i);
+		i++;
+	}
+	if(cputype == 70)
+	for(i=0; i<62; i=+2) {
+		UBMAP->r[i] = i<<12;
+		UBMAP->r[i+1] = 0;
+	}
+	printf("mem = %l\n", (maxmem+(maxmem>>2))>>2); /* maxmem*5/16 */
+#ifdef  LCBA
+	/* lcba_address initially contains UNIXMIN, defined in map_page.c */
+	lcba_count = lcba_max = lcba_size = 0;  /* not strictly necessary */
+	if (maxmem > lcba_address) lcba_max = maxmem - lcba_address;
+#endif
+	maxmem = min(maxmem, MAXMEM);
+	mfree(swapmap, nswap, swplo);
+
+	/*
+	 * determine clock
+	 */
+
+	UISA->r[7] = ka6[1]; /* io segment */
+	UISD->r[7] = 077406;
+	lks = CLOCK1;
+	if(fuiword(lks) == -1) {
+		lks = CLOCK2;
+		if(fuiword(lks) == -1)
+			panic("no clock");
+	}
+
+	/*
+	 * set up system process
+	 */
+
+	/* link all processes in the free queue */
+	i = 0;
+	for( cp = &proc[1]; cp < &proc[ NPROC ]; cp++ )
+	{
+		cp->p_pid = ++i;
+		qenter( &Free_proc.qhead,cp );
+	}
+
+	MAXPROC = &proc[1];
+	proc[0].p_addr = *ka6;
+	proc[0].p_size = USIZE;
+	proc[0].p_stat = SRUN;
+	proc[0].p_flag =| SLOAD|SSYS;
+	u.u_procp = &proc[0];
+
+	/*
+	 * set up 'known' i-nodes
+	 */
+
+	*lks = 0115;
+	cinit();
+	binit();
+
+	/* need to also initialize the control blocks of the NKS
+	 * system buffers
+	 */
+#ifdef BUFMOD
+	bsinit(*ka6 + USIZE);
+#endif BUFMOD
+
+	iinit();
+	rootdir = iget(rootdev, ROOTINO);
+	rootdir->i_flag =& ~ILOCK;
+	u.u_cdir = iget(rootdev, ROOTINO);
+	u.u_cdir->i_flag =& ~ILOCK;
+
+	/*
+	 * make init process
+	 * enter scheduling loop
+	 * with system process
+	 */
+
+	if(newproc()) {
+		expand(USIZE+1);
+		estabur(0, 1, 0, 0);
+		copyout(icode, 0, sizeof icode);
+		/*
+		 * Return goes to loc. 0 of user init
+		 * code just copied out.
+		 */
+		return;
+	}
+	sched();
+}
+
+/*
+ * Load the user hardware segmentation
+ * registers from the software prototype.
+ * The software registers must have
+ * been setup prior by estabur.
+ */
+sureg()
+{
+	register *up, *rp, a;
+#ifdef	LCBA
+	int b, *ua, *ra;
+#endif
+
+	a = u.u_procp->p_addr;
+	up = &u.u_uisa[16];
+	rp = &UISA->r[16];
+	if(cputype == 40) {
+		up =- 8;
+		rp =- 8;
+	}
+	while(rp > &UISA->r[0])
+		*--rp = *--up + a;
+	if((up=u.u_procp->p_textp) != NULL)
+		a =- up->x_caddr;
+	up = &u.u_uisd[16];
+	rp = &UISD->r[16];
+	if(cputype == 40) {
+		up =- 8;
+		rp =- 8;
+	}
+	while(rp > &UISD->r[0]) {
+		*--rp = *--up;
+		if((*rp & WO) == 0)
+			rp[(UISA-UISD)/2] =- a;
+	}
+#ifdef LCBA
+	if (u.u_lcbflg) {      /* do this only if process has siezed lcba */
+		up = &u.u_lcbmd[0];
+		rp = &UISD -> r[0];
+		ua = &u.u_lcbma[0];
+		ra = &UISA -> r[0];
+		a = lcba_address;
+		b = (cputype == 40)?8:16;
+		while (rp < &UISD -> r[b]){
+			if (*up && !*rp){
+				*rp = *up;
+				*ra = *ua + a;
+			}
+			up++; rp++; ua++; ra++;
+		}
+	}
+/*
+ * jsq BBN Tue Jul 25 19:26:08 EDT 1978
+ * Note this addition sets a hardware APF only if the software descriptor
+ * register is set and the hardware descriptor register is not set.  This should
+ * keep the lcba code from interfering with the unix page mapping even if map_page
+ * somehow messes up.
+ */
+#endif
+}
+
+/*
+ * Set up software prototype segmentation
+ * registers to implement the 3 pseudo
+ * text,data,stack segment sizes passed
+ * as arguments.
+ * The argument sep specifies if the
+ * text and data+stack segments are to
+ * be separated.
+ */
+estabur(nt, nd, ns, sep)
+{
+	register a, *ap, *dp;
+
+	if(sep) {
+		if(cputype == 40)
+			goto err;
+		if(nseg(nt) > 8 || nseg(nd)+nseg(ns) > 8)
+			goto err;
+	} else
+		if(nseg(nt)+nseg(nd)+nseg(ns) > 8)
+			goto err;
+	if(nt+nd+ns+USIZE > maxmem)
+		goto err;
+#ifdef	LCBA
+/* jsq BBN Tue Jul 25 19:23:46 EDT 1978 */
+	if (u.u_lcbflg) {
+		if (sep) {
+			if (u.u_mintlcb && (nseg(nt) >= u.u_mintlcb))
+				goto err;
+			if (u.u_minlcb && (nseg(nd) >= u.u_minlcb))
+				goto err;
+		} else {
+			if (u.u_minlcb &&
+			    ((nseg(nt) + nseg(nd)) >= u.u_minlcb))
+				goto err;
+		}
+		if ((u.u_maxlcb + nseg(ns)) > 8) goto err;
+	}
+#endif
+	a = 0;
+	ap = &u.u_uisa[0];
+	dp = &u.u_uisd[0];
+	while(nt >= 128) {
+		*dp++ = (127<<8) | RO;
+		*ap++ = a;
+		a =+ 128;
+		nt =- 128;
+	}
+	if(nt) {
+		*dp++ = ((nt-1)<<8) | RO;
+		*ap++ = a;
+	}
+	if(sep)
+	while(ap < &u.u_uisa[8]) {
+		*ap++ = 0;
+		*dp++ = 0;
+	}
+	a = USIZE;
+	while(nd >= 128) {
+		*dp++ = (127<<8) | RW;
+		*ap++ = a;
+		a =+ 128;
+		nd =- 128;
+	}
+	if(nd) {
+		*dp++ = ((nd-1)<<8) | RW;
+		*ap++ = a;
+		a =+ nd;
+	}
+	while(ap < &u.u_uisa[8]) {
+		*dp++ = 0;
+		*ap++ = 0;
+	}
+	if(sep)
+	while(ap < &u.u_uisa[16]) {
+		*dp++ = 0;
+		*ap++ = 0;
+	}
+	a =+ ns;
+	while(ns >= 128) {
+		a =- 128;
+		ns =- 128;
+		*--dp = (127<<8) | RW;
+		*--ap = a;
+	}
+	if(ns) {
+		*--dp = ((128-ns)<<8) | RW | ED;
+		*--ap = a-128;
+	}
+	if(!sep) {
+		ap = &u.u_uisa[0];
+		dp = &u.u_uisa[8];
+		while(ap < &u.u_uisa[8])
+			*dp++ = *ap++;
+		ap = &u.u_uisd[0];
+		dp = &u.u_uisd[8];
+		while(ap < &u.u_uisd[8])
+			*dp++ = *ap++;
+	}
+	sureg();
+	return(0);
+
+err:
+	u.u_error = ENOMEM;
+	return(-1);
+}
+
+/*
+ * Return the arg/128 rounded up.
+ */
+nseg(n)
+{
+
+	return((n+127)>>7);
+}

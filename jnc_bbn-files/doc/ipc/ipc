@@ -1,0 +1,589 @@
+.de zb
+.bl
+.in +5
+.ll -5
+'ti -3
+\\$1.\ 
+..
+.de ze
+.in -5
+.ll +5
+.bl
+..
+.de bz
+.bl 3
+.ne 7
+  \\$1
+.br
+.bl
+..
+.ls 2
+.nh
+.bl 10
+
+.bl 10
+.ce
+\fBA STANDARD FOR UNIX INTERPROCESS COMMUNICATION
+.bl 4
+.ce
+11 August 1977\fR
+.pn 1
+.af % i
+.he 1 ''-%-''
+.bp
+.nf
+.bl 6
+.ce
+\fBCONTENTS\fR
+.bl 3
+\fBCONTENTS\fR.................................................... i
+.bl 2
+\fBIntroduction\fR................................................ 1
+.bl
+\fBOverview\fR.................................................... 2
+.bl
+\fBExisting IPC mechanisms\fR..................................... 3
+.bl
+\fBData Transfer Mechanisms\fR.................................... 6
+.bl
+\fBControl Mechanisms\fR.......................................... 7
+.bl
+\fBProposed Plan\fR...............................................10
+.bl
+\fBProposed Data Transfer Mechanism\fR............................13
+.bl
+\fBProposed Control Mechanism\fR..................................14
+.bl
+\fBFuture Directions\fR...........................................17
+.bl
+\fBSummary\fR.....................................................20
+.bl 2
+\fBREFERENCES\fR..................................................21
+.pn 1
+.af % 1
+.he 1 ''-%-''
+.fi
+.bp
+.bz \fBIntroduction\fR
+.pg
+UNIX has become a popular operating system for  the  PDP-11.
+Much   of   this   popularity  is  a  result  of  its  perceptive
+implementation of the  file  system,  processes  and  many  other
+operating   system   facilities.   Recent  attempts  to  use  the
+interprocess communication  (IPC)  mechanisms  have  shown  that
+these  are  also well designed, but realistically suited only for
+certain types of applications.
+.pg
+An IPC facility generally comprises two types of mechanisms:
+those which provide for
+.ul
+data exchange
+between processes and those
+which provide for
+.ul
+control
+and synchronization  of  the  processes
+engaged in performing the data exchange.  The mechanisms provided
+by  Standard  UNIX  for data exchange are fairly straightforward,
+though they have several deficiencies which need to  be  overcome
+in providing for a general IPC facility.  The mechanisms provided
+for  control  of  communicating processes, on the other hand, are
+severely deficient.  Their deficiencies, however, derive  from  a
+failure  of  UNIX  to  provide  a  sufficiently  powerful process
+control framework for applications which were beyond the scope of
+the UNIX authors' original intentions, and so are  best  remedied
+in the context of a general solution.
+.bz \fBOverview\fR
+.pg
+The  objective  of  this document is to outline the range of
+possibilities for IPC  mechanisms,  to  select  a  collection  of
+primitives  which  will  span the space of IPC techniques, and to
+outline the plan for achieving this collection of primitives,  so
+that a standard IPC facility can be incorporated into the basic
+UNIX system.
+.pg
+The goal in defining a standard IPC facility is to produce a
+system  which  appears to the user programmer to provide a single
+uniform mechanism for coordinating interactions among  processes.
+Such  a mechanism may be composed internally of several different
+mechanisms with various characteristics as required in  different
+applications.
+.pg
+The  thesis  we  intend  to  defend in the remainder of this
+document is that the development of a standard depends  primarily
+upon   the   selection   of   a suitable
+.ul
+process  control  and synchronization
+mechanism.  Then the choice of a particular  data
+several different kinds of mechanisms can  be  made  to  function
+satisfactorily   in   conjunction   with   the  standard  control
+structure.  As a basis, we will select and describe  one  popular
+data  exchange  mechanism;  we  assert again, however, that other
+mechanisms can be introduced later as  needed.   Such  mechanisms
+would be implemented, insofar as possible, as part of the uniform
+mechanism  with  which  the  user is presented, but would provide
+different performance characteristics or capabilities.
+.bz "\fBExisting IPC Mechanisms\fR"
+.pg
+The data exchange mechanisms  of  UNIX  implement  a \fBpipe\fR
+facility which provides a simplex serial data stream by which one
+process  may  send  data to another.  Pipes were included in UNIX
+largely to allow a given process to act as a filter between two
+other processes by processing the output data stream of  one  and
+passing the processed data to the input data stream of the other.
+Pipes are constrained to exist only between processes which share
+a  common  ancestor,  but  are  otherwise very well suited to the
+filter application.
+.pg
+The control mechanisms required for the  filter  application
+are  minimal  since  it  is  usually acceptable in the context of
+traditional UNIX applications (which model  the  command/response
+behavior  of  a  user  at a terminal) that processes be made idle
+when they try but fail to output to or input from the filter  (or
+a  pipe  in  general).   However,  it  is  these  minimal control
+mechanisms  which  make  pipes  generally   unsuited   to   other
+applications  where,  for  example,  a single process may want to
+read from multiple pipes.
+.pg
+Attempts to employ UNIX in  certain  real time  applications
+and  particularly  in  data communication applications reveal the
+limitations of the standard IPC tools.   These  limitations  have
+forced several contractors to develop extensions to the standard UNIX
+which overcome the limitations.  So far, the extensions have been
+developed  as  packages  which embed additional mechanisms within
+the UNIX kernel to enhance the  basic  IPC  facility.   Two  such
+extensions are of particular interest:
+.bl
+.zb 1
+\fBRAND PORTS\fR [1] - The basic limitations seen by the  Rand
+group are that pipes can only be established by a common
+ancestor  of  the processes wishing to communicate, that
+no general  mechanism  exists  by  which  processes  may
+acquire  a  pipe  to  a  well known service, and that no
+satisfactory   mechanism   exists   for   the   reliable
+multiplexing  of  several  data streams from independent
+processes  into  a  single  pipe.   To  overcome   these
+limitations,  they  developed the \fBport\fR mechanism which
+embellishes the primitive pipe facility.
+.ze
+.zb 2
+\fBILLINOIS EVENTS\fR [2] - The basic limitations seen by  the
+Illinois  group are that pipes are inherently slow and
+unsuited  for   applications   requiring   large   block
+transfers   of   information,   or   the   rapid  update
+characteristic of a mechanism based  on  shared  memory,
+and  that  they  are  too  inefficient to be used in the
+exchange of simple status information between processes.
+To overcome these limitations, they developed the  \fBevent\fR
+and \fBmessage\fR mechanisms.
+.ze
+.bl
+.pg
+The  basic  limitations cited by these respective groups are
+encountered  only  in  attempting  to  solve   their   particular
+communications   problems.    Without   regard  for  the  generic
+requirements of process  interaction,  these  specific  solutions
+usually do not enhance the solvability of other related problems.
+Ideally,  we  would  prefer  that  the basic mechanisms of IPC be
+developed with an eye toward providing a truly  general  facility
+in  which  solutions  to  all IPC requirements could be expressed
+naturally and efficiently following both  the  philosophical  and
+the  implementation  guidelines of UNIX.  It is our view that the
+most important consideration in pursuing this ideal  facility  is
+to  develop an appropriate set of process control mechanisms, and
+that the reason the solutions posed by Rand and Illinois are  not
+sufficiently general is that they are not based on an appropriate
+control structure.
+.bz "\fBData Transfer Mechanisms\fR"
+.pg
+The  notion  of data exchange encompasses a wide spectrum of
+techniques, from inferential data observance, through bit passing
+and  serial  data  streams,  proceeding  ultimately  to  explicit
+read/write sharing of common memory cells.  The pipe mechanism of
+the  Standard  UNIX occupies a position toward the low end of the
+spectrum.  The Rand group successfully moved up\fB*\fR
+.fn
+\fB*\fR It is not clear if the spectrum is linearly ordered.
+.fe
+in the  spectrum
+by  introducing  an  additional  mechanism  on  top  of  the pipe
+implementation.  The Illinois group similarly  moved  up  in  the
+spectrum  by  introducing a somewhat distinct mechanism, based on
+memory sharing, in addition to pipes, in order to implement event
+and message transfers, which  are  functionally  serial  transfer
+mechanisms.   We view this as an improvement to the standard pipe
+mechanism  to  implement  a   higher   bandwidth   link   between
+communicating   processes.    The  memory  sharing  mechanism  is
+intended to support message  passing,  for  efficiency  in  large
+transfers,   and   lacks   primitives  necessary  for  use  as  a
+communication scheme per se, independently  of  the  message  and
+event mechanisms.
+.pg
+In  each  case,  the  basic  character  of the data transfer
+mechanism is that of a serial data stream  from  one  process  to
+another.   These  implementations  differ from pipes in that they
+remove restrictions, or enhance efficiency, rather than providing
+a different type of data transfer.
+.bz "\fBControl Mechanisms\fR"
+.pg
+Control is a much more complex issue than  the  transfer  of
+data.   The objectives of control in this context are to permit a
+process  to  voluntarily  choose  to  be  blocked   pending   the
+occurrence  of  some  interesting event(s) and to subsequently be
+activated, when an event occurs.
+.pg
+The notion of control also encompasses a  wide  spectrum  of
+techniques.   At  the  low  end  of  this  spectrum  there  is no
+mechanism for the process to block or be activated, in which case
+it must constantly poll all events of interest to see if any have
+occurred.  Higher in  the  spectrum  we  find  the  current  UNIX
+mechanism  which  blocks  the  process  whenever  I/O  (to files,
+devices, or pipes) cannot complete and reactivates them  when  it
+finally  does.   Higher  than  this  we  find systems which allow
+voluntary process blocking but  effect  activation  whenever  any
+event  occurs;  these  systems  may  then  require the process to
+decide for itself (by polling) why it was awakened, or  may  give
+it  an  indication  of  the reason(s) for activating.  Toward the
+high end of the spectrum we find systems which allow processes to
+designate the particular  subset  of  possible  events  which  it
+believes  to  be interesting, so that it and the system can avoid
+extraneous process activations.
+.pg
+In all cases, however, the basic character  of  the  control
+mechanism  involves  the ability to test the status of some state
+which can be modified by an action external to the process.   The
+various  levels  in  the  spectrum  exist  to  provide additional
+facilities to improve the system efficiency.
+.pg
+The current UNIX implementation is very low in the spectrum.
+In standard UNIX when a process writes data onto a pipe,  it  may
+be  suspended  until  the process at the other end reads from the
+pipe.  This is a serious deficiency in  the  case  of  a  sending
+process, if the process at the other end of a pipe is potentially
+uncooperative  and  the sender needs to maintain some dialog with
+several processes.  This situation is equally undesirable  for  a
+receiving  process,  since  when  it reads from an empty pipe, it
+will be suspended until something is written into that particular
+pipe.  This situation exists because standard UNIX has chosen the
+philosophy of \fBblocking I/O\fR, in which  a  process  blocks  as  a
+result of I/O system calls.  Blocking I/O prevents a process from
+being able to handle multiple data paths.
+.pg
+The  Rand group attempted to move up in the control spectrum
+by providing users of its IPC facility with a  new  system  call,
+\fBempty\fR,  which  can  provide  a  process  with information about
+whether or not a read-from-pipe  or  write-to-pipe  operation  is
+likely  to  cause  process  blocking.   This  extension  has  two
+problems as a solution to the general problem  of  blocking  I/O.
+First,  the  empty  call  does  not  disclose  how  much room for
+writing, or data for reading, is available, only whether the pipe
+contains any data at all.  This prevents the  user  process  from
+transferring  blocks of data without risk of blocking since there
+is no way for the process to tell whether a read or write of more
+than one  byte  will  succeed.   The  second  problem  with  this
+extension  is that it forces a process to actively poll its pipes
+until some I/O can be done, which is very inefficient.
+.pg
+The Illinois group selected a point in the control  spectrum
+by  use  of the event mechanism which gives processes the ability
+to indicate for which events they  would  like  to  wait  and  to
+signal the occurrence of significant events.  Unfortunately, this
+solution  also does not incorporate the ability to wait for other
+system events, such as timeouts, in a similar manner.
+.bz "\fBProposed Plan\fR"
+.pg
+A uniform treatment of blocking and activating, using events
+that are signalled by system as well as  process  activities,  is
+required  for  a  general  IPC  facility.   In  general a process
+requires two assists from the system in order to  cooperate  with
+other processes.
+.pg
+First, a process must be able to determine the status of its
+various  interaction  points,  i.e., states which may change as a
+result of an action by the system or another process.
+.pg
+Second, it must be able to request that the  system  suspend
+its execution until something in the status changes.
+.pg
+The  major issues in designing the primitives needed involve
+selecting the complexity of  facilities  which  the  system  will
+provide  in  implementing these two requirements.  Because of the
+variety of applications for IPC, it is appropriate  to  keep  the
+facilities  implemented  as part of the kernel to a minimum, both
+for reasons of practicality, and to avoid creating an environment
+which is suitable for one kind of application at the  expense  of
+another.
+.pg
+The key issue in IPC is, again, that of process control.  In
+defining  a  standard  communication  method,  it is important to
+assure that the mechanism provided  will  interface  properly  to
+other system facilities.  To this end, processes must be provided
+with a standard mechanism for testing the status of
+.ul
+any
+condition
+which  can  be  altered by external means, and for suspending the
+process pending a change  in  that  status.   A  mechanism  which
+provides   these   primitives   solely   for   the   interprocess
+communication scheme is inadequate since it does  not  provide  a
+mechanism  for utilizing the other system facilities, such as the
+timer, other I/O devices like the controlling TTY, and so on.  In
+such an environment, a process could not operate properly  if  it
+required  usage  of  resources other than the IPC, since it would
+not be  able  to  suspend  execution  pending  several  different
+possible  occurrences.  It is possible to circumvent this problem
+by defining special case mechanisms for each resource.   However,
+a process using such a system could not effectively utilize other
+resources  simultaneously.   Ultimately,  all  possible  external
+conditions should be handled by one common means to  avoid  these
+problems.
+     The  general  topic  of  process control and synchronization
+also includes  the  concept  of  process  interruption.   Process
+interruption  is  implemented  in  UNIX  through  the  use of the
+\fBsignal\fR  mechanism.   Unfortunately,  signals  are  designed  to
+support  abnormal  events  and  have  several  flaws as a result.
+Fixing these flaws is a major  project  and  must  be  considered
+beyond   the   scope  of  initially  realizable  IPC  mechanisms.
+However, the IPC mechanism  should  be  structured  to  permit  a
+mechanism  for  process  interruption to be cleanly interfaced to
+the process suspension mechanism, using the same  mechanisms  for
+determining  status and detecting changes in each.  The structure
+of facilities provided by the operating  system  in  this  design
+relies  on  the  existence  of  methods for testing the status of
+various conditions.  Since  the  system  fields  all  interrupts,
+these  can  be  viewed  simply as another way in which the system
+responds to detection of a change in the status, by  interrupting
+the  running process, instead of activating the sleeping process.
+.bz "\fBProposed Data Transfer Mechanism\fR"
+.pg
+The concept of  a  serial  communication  path  between  two
+processes  is  sufficiently  general,  and  powerful,  that it is
+appropriate  to  provide  as  a  system  primitive.    For   many
+applications  it  is  adequate, provided the attainable bandwidth
+between the processes is sufficient.  We propose  that  the  Rand
+port  mechanism  be accepted as a standard in principle, and that
+it be augmented by introduction of the various control primitives
+discussed below.
+.pg
+To the user application programmer, the distinction  between
+pipes  and ports is somewhat arbitrary.  Pipes appear simply as a
+somewhat restricted  port.   Although  pipes  should  remain  for
+compatibility,  the  port  mechanism  should  be  promoted as the
+standard communication facility, and efforts  should  proceed  to
+improve  the  efficiency  of  operation  of  ports.   Further,  a
+mechanism such as the Illinois  messages  and  events  should  be
+subsumed,  if  necessary,  within  the  port  concept, so that it
+appears to the user as one mechanism.  This would be accomplished
+by introducing the memory sharing machinery internally as a means
+of improving the bandwidth and speed of port transfers.  The goal
+is to provide a single mechanism, from the user's viewpoint,  for
+serial  data  transfer which may, if necessary, utilize different
+machinery internally as required by the application.
+.bz "\fBProposed Control Mechanism\fR"
+.pg
+In selecting a point in the control spectrum we  are  guided
+by   the   (perhaps   conflicting)   goals   of  flexibility  and
+implementation efficiency.  The high points in the  spectrum  are
+likely  to  require  the  kernel  to  hold a very large amount of
+information for each process, and kernel space is at  a  premium.
+The  low  points  are  not sufficiently flexible.  At the time of
+this study we are  of  the  opinion  that  a  mechanism  such  as
+\fawait\fR,  described in the following paragraphs, might be adopted
+for the standard IPC without detrimental loss in  flexibility  or
+efficiency.   Its  initial  definition,  for  practical  reasons,
+includes  only  the  pipe  and  timer  status.   This  should  be
+augmented to include other external events, such as TTY input, as
+the system is implemented.
+.pg
+The first problem that we have addressed is that when a user
+reads  an empty pipe, or writes a full one, the user's process is
+suspended.  We propose the implementation of a system call  which
+causes a process to dismiss for a time or until one of a specific
+set of events occurs.  That system call is outlined below.
+.bl 3
+.ls 1
+.nf
+.kp
+\fBAWAIT:
+
+     AWAIT(Timeout, Mode)
+
+          int	Timeout    /* In milliseconds */
+          int	Mode       /* Wakeup flags */
+
+          /* wakeup flag definitions */
+
+          01   /* When any pipe is written */
+          02   /* When any pipe is read */
+          04   /* When any pipe becomes empty */\fR
+.ke
+.fi
+.ls 2
+.bl 3
+.pg
+The  timeout  is  specified in milliseconds for convenience.
+However, the accuracy of the time at which the  call  returns  to
+the user is many tens of milliseconds.
+.pg
+The  wakeup  flags  control  the  set  of  events which will
+activate the user's process.  The pipes  referred  to  are  those
+which  this  process has open for either reading or writing.  For
+example, if a user has a pipe to user B, and user B writes on the
+pipe, user A will be wakened if mode bit 01 is set.  User A  will
+not be wakened when he writes on a pipe to another user.
+.pg
+This  type of a call is subject to a classic synchronization
+bug.  Imagine that user A checks the status of his pipes, decides
+that there is nothing to do and calls await.  Potentially, user
+B could have run between the time that user A checked the  status
+and the time when he went to sleep.  If user B were to write on a
+pipe  which  terminated  at  user  A, then user A would miss this
+important fact, and might not wake until  the  timeout  had  been
+reached.
+.pg
+In  our  proposed  implementation, the system would save the
+fact that a write (or other operation) had happened on a pipe  to
+this  user,  and  when await is called, the system would check to
+see whether the desired action had already occurred, would  clear
+the  internal  status  of pending wakeup events, and would return
+directly to the user.
+.pg
+Whenever a user returns from an await system call, he should
+poll all of his I/O to determine whether anything  has  happened.
+.pg
+The  await  system  call  provides  a  mechanism  by which a
+process can block awaiting an external event.  Standard UNIX does
+not provide the other required facility, which is the ability  to
+test  the  status  of  a pipe before doing a read or write system
+call.  We propose the extension of UNIX  to  provide  a  \fBcapacity\fR
+call  which  would  tell how many bytes are available for reading
+and writing.  This call is defined below.
+.bl 3
+.ls 1
+.nf
+.kp
+\fBCAPAC:
+
+     CAPAC(File_Descriptor,Cntvec)
+
+     Returns:
+
+          Cntvec[0] - Number of bytes for reading (may be 0)
+          Cntvec[1] - Number of bytes for writing (may be 0)\fR
+.ke
+.fi
+.ls 2
+.bl 3
+.bz "\fBFuture Directions\fR"
+.pg
+The primary purpose of this document has been to  outline  a
+set  of  IPC  primitives  which  would  be adequate to permit the
+implementation of real time programs.  The entire  space  of  IPC
+techniques  is  not, however, spanned by the proposed extensions.
+Several aspects are glaringly missing and represent  areas  where
+future effort is necessary.
+.pg
+Though the signal mechanism in UNIX seems to go in the right
+direction,  its  implementation  flaws  prevent  its  use in real
+programs.  This stems from its intended design as an  "exception"
+handler,  to  provide  a mechanism for controlling processes in a
+very simple manner.
+.pg
+The signalling mechanism  should  be  used  as  a  model  of
+possible  external conditions, and these should be coalesced into
+the standard status checking facility.  This area  also  overlaps
+the  realm of interrupts.  The most obvious candidate for work in
+this area is TTY input.
+.pg
+Data transfer as serial data streams  is  only  one  of  the
+important  techniques.   In  addition,  it is often necessary for
+several processes to share common data structures.  Some form  of
+shared  memory is clearly desirable for this purpose.  One of the
+primary difficulties with providing a shared memory capability is
+that it requires many other system calls  in  addition  to  those
+provided  for  serial IPC before it can be used effectively.  For
+example, it must be possible to lock some section of  the  shared
+address  space.   This  requires  a system call which dismisses a
+process until it can have exclusive access to  the  desired  data
+segment.   Such  a  call is complicated by the need to be able to
+time out such locks in case one of the processes has forgotten to
+unlock the data segment.  In addition, a process interacting with
+another using a shared data  space  must  be  provided  with  the
+primitives  needed for testing the status of the interaction, and
+suspending (or  interrupting)  its  operation  when  that  status
+changes.   For  example, a process might suspend processing until
+another process changes the contents of the shared memory  space.
+Such  a  mechanism  would  fit  cleanly  into  the  model defined
+previously.
+.pg
+The third aspect of future work  in  this  area  is  closely
+associated  with  the  inter procedure  communication required by
+high level languages; it should be possible to perform subroutine
+calls without much  concern  for  which  process  implements  the
+subroutine.   Thus,  a  subroutine  call  should be able to cross
+process boundaries without explicit protocols being set up by the
+user level program.
+.pg
+Finally, a good inter process communication mechanism  would
+permit  development  of  UNIX  to  expand  into  areas previously
+impossible  to  consider  because  of  kernel  size  limitations.
+Facilities which are conceptually part of the system function and
+which  should  be  available  as  a  standard, such as control of
+intelligent terminals and graphic  devices,  but  which  are  not
+essential  to  all  application  programs,  can  be provided in a
+process separate from the system itself, and interact with  users
+by  means  of  the  IPC facilities instead of system calls.  This
+would permit development  of  more  powerful  standard  tools  to
+support applications, which could not be considered for inclusion
+in  the  kernel  itself.    The  philosophy we propose here is to
+carefully control placement  of  application specific  mechanisms
+within  the  kernel  itself, and to restrict kernel mechanisms to
+the basic  primitives  necessary  to  support  a  wide  range  of
+applications,  which  would  be  encapsulated as required, either
+within user processes themselves, or within a non system  process
+which  acts as a server to users of the particular facility.  For
+example, the Events mechanism, which provides  a  fairly  complex
+means  for  selecting desired types of events from a queue, might
+be  implemented  in  user  processes,  utilizing  the  basic  IPC
+primitives proposed herein as a foundation.
+.bz \fBSummary\fR
+.pg
+In  this  document we have discussed the basic components of
+the existing UNIX interprocess communication facility  and  have
+mentioned  a  number  of  extensions  which have been made to the
+facility  to  compensate  for  obvious  deficiencies.   The  most
+glaring  deficiency  is,  of course, the lack of adequate process
+control and synchronization mechanisms.  This deficiency is  best
+remedied  in  a  general  context  in  which  IPC,  Input/Output,
+interrupt handling, interval timing, and so on, can be treated in
+a uniform manner.  We have suggested incorporation into  UNIX  of
+two  new mechanisms (\fBawait\fR and \fBcapac\fR), which form the basis for a
+general  process  control  facility  that  can  be   applied   to
+synchronization of process activities in each of these areas, and
+selected  the  Rand  port mechanism as the initial model for data
+exchange.   The  simple  sequential  stream  mechanism   can   be
+augmented  by  other  schemes  to provide exchange in the form of
+shared memory, for example, provided that such  extensions  build
+on the primitive mechanism established for process control.
+.bp
+.bl 1
+.ce
+\fBREFERENCES\fR
+.ls 1
+.bl 2
+.nf
+[1]  Interprocess Communication Extensions for the UNIX Operating
+     System:  II.   Implementation,  Rand  Corporation Report No.
+     R-2064/2-PR, Rand Corporation, Santa Monica,  CA,  22  April
+     1977.
+.bl
+[2]  Illinois Interprocess Communication Facility for UNIX,  CAC
+     Technical   Memorandum   Number   84,  Center  for  Advanced
+     Computation, University of Illinois at  Urbana-Champaign,  1
+     April 1977.
+
+
+
+
+
+

@@ -1,0 +1,112 @@
+/ low core
+
+br4 = 200
+br5 = 240
+br6 = 300
+br7 = 340
+
+. = 0^.
+	br	1f
+	4
+
+/ trap vectors
+	trap; br7+0.		/ bus error
+	trap; br7+1.		/ illegal instruction
+	trap; br7+2.		/ bpt-trace trap
+	trap; br7+3.		/ iot trap
+	trap; br7+4.		/ power fail
+	trap; br7+5.		/ emulator trap
+	trap; br7+6.		/ system entry
+
+. = 40^.
+.globl	start, dump
+1:	jmp	start
+	jmp	dump
+
+
+. = 60^.
+	klin; br4
+	klou; br4
+
+. = 100^.
+	kwlp; br6
+	kwlp; br6
+
+. = 114^.
+	trap; br7+7.		/ 11/70 parity
+
+. = 124^.
+	impou; br5
+
+. = 150^.
+	gnio; br5+4.            / Genisco #2
+
+. = 154^.
+	gnio; br5+0.            / Genisco #0
+
+. = 160^.
+	gnio; br5+2.            / Genisco #1
+
+. = 224^.
+	htio; br5
+
+. = 240^.
+	trap; br7+10.		/ programmed interrupt
+	trap; br7+8.		/ floating point
+	trap; br7+9.		/ segmentation violation
+
+. = 254^.
+	hpio; br5
+
+. = 274^.
+	impin; br5
+
+. = 300^.
+	dzin; br5
+	dzou; br5
+
+. = 310^.
+	dhin; br5
+	dhou; br5
+
+. = 320^.
+	dmio; br4
+
+//////////////////////////////////////////////////////
+/		interface code to C
+//////////////////////////////////////////////////////
+
+.globl	call, trap
+
+.globl	_klrint
+klin:	jsr	r0,call; _klrint
+.globl	_klxint
+klou:	jsr	r0,call; _klxint
+
+.globl  _clock
+kwlp:	jsr	r0,call; _clock
+
+
+.globl	_htintr
+htio:	jsr	r0,call; _htintr
+
+.globl	_hpintr
+hpio:	jsr	r0,call; _hpintr
+
+.globl	_dzrint,_dzxint
+dzin:	jsr	r0,call; _dzrint
+dzou:	jsr	r0,call; _dzxint
+
+.globl	_i11a_iint,_i11a_oint
+impin:	jsr	r0,call; _i11a_iint
+impou:	jsr	r0,call; _i11a_oint
+
+.globl	_dhrint,_dhxint
+dhin:	jsr	r0,call; _dhrint
+dhou:	jsr	r0,call; _dhxint
+
+.globl _dmint
+dmio:	jsr	r0,call; _dmint
+
+.globl _gnint
+gnio:   jsr     r0,call; _gnint

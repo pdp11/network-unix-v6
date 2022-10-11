@@ -1,0 +1,54 @@
+% : I will use unix.45 as a default
+% rm -f now
+%  date>now
+%  cd ken
+%  build ../conf/ldken
+% rm -f now
+%  date>now
+%  : file is already current
+% 
+%  cd ../dmr
+%  build ../conf/libdmr
+% rm -f now
+%  date>now
+%  : file is already current
+% 
+%  cd ../ncpkernel
+%  build ../conf/ldncp
+% rm -f now
+%  date>now
+%  : file is already current
+% 
+%  cd ../conf
+%  build testfile
+% rm -f now
+%  date>now
+%  : file is already current
+% 
+%  cd ..
+%  rm -f libraries
+%  date>libraries
+%  cd dmr
+%  ncc -c -O dvtty.c
+%  cd ..
+%  cd dmr
+%  ld -x -r dvdev.o dvmisc.o dvread.o dvtty.o dvuser.o \
+dvwrit.o dvbuf.o dvchan.o
+%  mv a.out dv.o
+%  cd ..
+%  cd conf
+%  ld -x -r -d l.o m45.o c.o ldken libdmr ../dmr/dv.o
+%  syms -ug a.out
+
+
+
+File a.out
+Non-sharable
+  Text: 37658   Data: 3816    Bss: 28596    (decimal bytes)
+  Text: 111432  Data: 7350    Bss: 67664    (octal bytes)
+
+%  sysfix a.out ../unix.45
+%  cd ..
+%  date
+Tue May 29 14:31:53 EDT 1979
+%  

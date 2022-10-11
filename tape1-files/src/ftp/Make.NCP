@@ -1,0 +1,81 @@
+
+#This file was converted from a Build.info file
+#and subsequently hand crafted - ado
+
+CC = pcc
+CFLAGS = -O -DNCP
+
+.ONESHELL6:
+
+default: .FAKE ncp
+
+ncp: .FAKE \
+   ncpftpsrv\
+   ncpsrvrftp\
+   ncpftptty\
+   ncpftp\
+   ncpftpmain
+
+# begin ncp stuff
+
+ncpftpsrv: \
+   ftpsrv.c\
+   ncp_fns.o\
+   srv.h\
+   ftp.h\
+   spawn.o\
+   die.o
+	$(CC) $(CFLAGS)  ftpsrv.c ncp_fns.o spawn.o die.o -o ncpftpsrv -ln
+
+ncpsrvrftp: \
+   srvrftp.c\
+   ncp_fns.o\
+   srv.h\
+   ftp.h\
+   spawn.o\
+   die.o\
+   ncp_srv.o
+	$(CC) $(CFLAGS)  srvrftp.c ncp_srv.o ncp_fns.o spawn.o die.o -o ncpsrvrftp -ln
+
+ncp_srv.o: \
+   ncp_srv.c\
+   ftp.h
+	$(CC) -c $(CFLAGS)  ncp_srv.c
+
+ncp_fns.o: \
+   ncp_fns.c\
+   ftp.h
+	$(CC) -c $(CFLAGS)  ncp_fns.c
+
+ncpftptty: \
+   ncpftptty.o\
+   ncp_fns.o
+	$(CC) $(CFLAGS)  ncpftptty.o ncp_fns.o -o ncpftptty -ln
+
+ncpftptty.o: \
+   ftptty.c\
+   ftp.h
+	rm -f ncpftptty.o
+	$(CC) -c $(CFLAGS) ftptty.c
+	mf ftptty.o ncpftptty.o
+
+ncpftp: \
+   ftp.c\
+   ftp.h\
+   ncp_fns.o
+	$(CC) $(CFLAGS)  ftp.c ncp_fns.o -o ncpftp -ln
+
+ncpftpmain: \
+   ftpmain.c\
+   ftp.h\
+   ncp_usr.o\
+   ncp_fns.o
+	$(CC) $(CFLAGS)  ftpmain.c ncp_usr.o ncp_fns.o -o ncpftpmain -ln
+
+ncp_usr.o: \
+   ncp_usr.c\
+   ftp.h\
+   usr.h
+	$(CC) -c $(CFLAGS)  ncp_usr.c
+
+

@@ -1,0 +1,26 @@
+chdir ../ken
+: loop
+if $1x = x goto loadit
+ncc -t -c -O $1
+shift
+goto loop
+: loadit
+echo "loading ken"
+ld -x -r \
+	alloc.o		awaitr.o	clock.o		fio.o\
+	iget.o          main.o          malloc.o\
+	nami.o          pipe.o          prf.o\
+	rdwri.o         sig.o           slp.o\
+	subr.o          sys1.o          sys2.o\
+	sys3.o          sys4.o          sysent.o\
+	proc_util.o     text.o          trap.o  \
+	map_page.o      set_lcba.o
+mv a.out ../conf/ldken
+
+
+chdir ../conf
+echo Loading
+/usr/agn/bigld -x -r -d l.o m70.o c.o ldncp ldken libdmr
+nm -ug a.out
+sysfix a.out ../unix
+echo 'Done - output is ../unix'

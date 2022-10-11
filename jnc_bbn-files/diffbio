@@ -1,0 +1,363 @@
+93,102c93
+* 
+* 	/*
+* 	 * The following conditional has been changed to prevent breada's
+* 	 * from being initiated if no buffers are available.  This should
+* 	 * prevent a type of buffer deadlock.
+* 	 */
+* 
+* 	if (rablkno && !incore(dev, rablkno) &&
+* 	    (bfreelist.av_forw != &bfreelist)) {	/* 1Dec78, cdh BBN */
+* 
+---
+. 	if (rablkno && !incore(dev, rablkno)) {
+104a96
+. #ifndef BUFMOD
+105a98,101
+. #endif
+. #ifdef BUFMOD
+. 			brelse(rabp,&bfreelist);
+. #endif
+128d123
+* 
+135a131
+. #ifndef BUFMOD
+136a133,136
+. #endif
+. #ifdef BUFMOD
+. 		brelse(rbp,&bfreelist);
+. #endif
+163a164
+. #ifndef BUFMOD
+164a166,169
+. #endif
+. #ifdef BUFMOD
+. 		brelse(rbp,&bfreelist);
+. #endif
+180a186
+. #ifndef BUFMOD
+216a223
+. #endif
+217a225
+. #ifdef BUFMOD
+218a227,263
+.  * release the buffer, with no I/O implied.
+.  */
+. brelse(bp,freel)
+. struct buf *bp,*freel;
+. {
+. 	register struct buf *rbp, **backp;
+. 	register int sps;
+. 
+. 	rbp = bp;
+. 	if (rbp->b_flags&B_WANTED)
+. 		wakeup(rbp);
+. 	if (freel->b_flags&B_WANTED) {
+. 		freel->b_flags =& ~B_WANTED;
+. 		wakeup(freel);
+. 	}
+. 	if (rbp->b_flags&B_ERROR)
+. 		rbp->b_dev.d_minor = -1;  /* no assoc. on error */
+. 	sps = PS->integ;
+. 	spl6();
+. 	if (rbp->b_flags & B_AGE) {
+. 		backp = &freel->av_forw;
+. 		(*backp)->av_back = rbp;
+. 		rbp->av_forw = *backp;
+. 		*backp = rbp;
+. 		rbp->av_back = freel;
+. 	} else {
+. 		backp = &freel->av_back;
+. 		(*backp)->av_forw = rbp;
+. 		rbp->av_back = *backp;
+. 		*backp = rbp;
+. 		rbp->av_forw = freel;
+. 	}
+. 	rbp->b_flags =& ~(B_WANTED|B_BUSY|B_ASYNC|B_AGE);
+. 	PS->integ = sps;
+. }
+. #endif
+. /*
+236,242d280
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+249d286
+* 
+256,259c293,295
+* 	if ( (nb = ip->i_addr[position] ) )
+*   		if ( ( bp = incore(nd,nb) ) )
+* 	 		if ( bp->b_flags & B_DELWRI )
+* 				bp->b_flags =& ~( B_DELWRI );
+---
+. 	if ( (nb = ip->i_addr[position] ) &&  ( bp = incore(nd,nb) ) &&
+. 	     ( bp->b_flags & B_DELWRI ))
+. 			bp->b_flags =& ~( B_DELWRI );
+264,268c300
+* 
+* 
+* 
+* 
+* 
+---
+. #ifndef BUFMOD
+315,322d346
+* 
+* 
+* 	/* bbn:mek--- avoid choosing a delayed-write buffer if possible.
+* 			(10/12/78) */
+* 	for ( bp = bfreelist.av_forw; bp != &bfreelist; bp = bp->av_forw )
+* 		if ( ! ( bp->b_flags & B_DELWRI ) ) break;
+* 	if ( bp == &bfreelist )		/* no luck! take the next free buffer */
+* 		bp = bfreelist.av_forw;
+324,325c348
+* 
+* 	notavail(bp);
+---
+. 	notavail(bp = bfreelist.av_forw);
+341a365
+. #endif
+342a367,443
+. #ifdef BUFMOD
+. 
+. /* getblk and getsblk are different "entry points" to essentially the
+.  * same routine. They differ only in that getblk gets a free buffer block
+.  * from bfreelist whereas getsblk takes its from sbfreel.
+.  */
+. 
+. getblk(dev, blkno)
+. {
+. 	gblk(&bfreelist,dev,blkno);
+. }
+. 
+. getsblk(dev, blkno)
+. {
+. 	gblk(&sbfreel,dev,blkno);
+. }
+. 
+. gblk(freel,dev, blkno)
+. struct buf *freel;
+. {
+. 	register struct buf *bp;
+. 	register struct devtab *dp;
+. 	extern lbolt;
+. 
+. 	if(dev.d_major >= nblkdev)
+. 		panic("blkdev");
+. 
+.     loop:
+. 	if (dev < 0)
+. 		dp = freel;
+. 	else {
+. 		dp = bdevsw[dev.d_major].d_tab;
+. 		if(dp == NULL)
+. 			panic("devtab");
+. 		for (bp=dp->b_forw; bp != dp; bp = bp->b_forw) {
+. 			if (bp->b_blkno!=blkno || bp->b_dev!=dev)
+. 				continue;
+. 			spl6();
+. 			if (bp->b_flags&B_BUSY) {
+. 				bp->b_flags =| B_WANTED;
+. 				sleep(bp, PRIBIO+1);
+. 				spl0();
+. 				goto loop;
+. 			}
+. 			spl0();
+. 			notavail(bp);
+. 			return(bp);
+. 		}
+. 	}
+. 	spl6();
+. 	if (freel->av_forw == freel) {
+. 		freel->b_flags =| B_WANTED;
+. 		sleep(freel, PRIBIO+1);
+. 		spl0();
+. 		goto loop;
+. 	}
+. 	spl0();
+. 	notavail(bp = freel->av_forw);
+. 	if (bp->b_flags & B_DELWRI) {
+. 		bp->b_flags =| B_ASYNC;
+. 		bwrite(bp);
+. 		goto loop;
+. 	}
+. 	bp->b_flags = B_BUSY;
+. 	bp->b_back->b_forw = bp->b_forw;
+. 	bp->b_forw->b_back = bp->b_back;
+. 	bp->b_forw = dp->b_forw;
+. 	bp->b_back = dp;
+. 	dp->b_forw->b_back = bp;
+. 	dp->b_forw = bp;
+. 	bp->b_dev = dev;
+. 	bp->b_blkno = blkno;
+. 	return(bp);
+. }
+. 
+. #endif
+. 
+392,397d492
+* #ifdef PASYNC
+* 	if (rbp -> b_flags & B_PASYNC) {/* jsq BBN 2-26-79 */
+*                 rbp -> b_flags =& ~(B_BUSY|B_WANTED|B_PASYNC);
+*                 wakeup(rbp);
+*         } else
+* #endif
+398a494,497
+. #ifdef BUFMOD
+. 		brelse(rbp,&bfreelist);
+. #endif
+. #ifndef BUFMOD
+399a499
+. #endif
+443a544,547
+. #ifdef BUFMOD
+. 		brelse(bp,&bfreelist);
+. #endif
+. #ifndef BUFMOD
+444a549
+. #endif
+457a563,594
+. #ifdef BUFMOD
+. 	/* this routine initializes the control blocks of the system
+. 	 * buffers which are in user space
+. 	 */
+. 
+. bsinit(bufadr)
+. {
+. 	register struct buf *bp;
+. 	register int i;
+. 
+. 	sbfreel.b_forw = sbfreel.b_back =
+. 	    sbfreel.av_forw = sbfreel.av_back = &sbfreel;
+. 	for (i=0; i<NSBUF; i++) {
+. 		bp = &sbuf[i];
+. 		bp->b_dev = -1;
+. 		bp->b_paddr = bufadr;
+. 		bp->b_addr = bufadr<<6;
+. 		bp->b_xmem = bufadr>>(16-6);
+. 		bufadr =+ (512>>6);
+. 		bp->b_back = &sbfreel;
+. 		bp->b_forw = sbfreel.b_forw;
+. 		sbfreel.b_forw->b_back = bp;
+. 		sbfreel.b_forw = bp;
+. 		bp->b_flags = B_BUSY;
+. 		brelse(bp,&sbfreel);
+. 	}
+. }
+. 
+. #endif
+. 
+. 
+. #ifndef GATEWAY
+516a654
+. #endif
+525a664
+. #ifdef  CPU70
+527c666
+* 
+---
+. #endif
+530a670
+. #ifdef  CPU70
+550a691
+. #endif
+556c697
+* 
+---
+. #ifdef  CPU70
+560a702
+. #endif
+626a769,770
+. 
+. #ifndef GATEWAY
+635,637c779
+* #ifdef PASYNC
+* 	int async;      /* jsq BBN 2-26-79 */
+* #endif
+---
+. 
+640,643d781
+* #ifdef PASYNC                           /* jsq BBN 2-26-79 */
+* 	async = rw & B_PASYNC;          /* are we not sleeping? */
+* 	if (async && (rw & B_READ)) goto bad;   /* can't read, then */
+* #endif
+645c783
+* 	 * Check odd base, odd count:  address wraparound checked below
+---
+. 	 * Check odd base, odd count, and address wraparound
+647c785
+* 	if (base&01 || u.u_count&01)
+---
+. 	if (base&01 || u.u_count&01 || base>=base+u.u_count)
+660d797
+* 	 * Check for address wraparound.
+663a801
+. 	 * (remember wraparound was already checked).
+665,667c803,804
+* 	if ((base >= (base + u.u_count)) ||
+* 	  ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
+* 	    && nb < 1024-u.u_ssize))
+---
+. 	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
+. 	    && nb < 1024-u.u_ssize)
+680d816
+* 		    if (u.u_lcbflg == 0) goto bad;
+683,684c819,820
+* 		    if (((u.u_lcbmd[ts] >> 8) & 127)    /* does area mapped */
+* 			< (nb & 0177))     /* include base? */
+---
+. 		    if ((u.u_lcbmd[ts] & (127 << 8))    /* does area mapped */
+. 			< (((nb & 0177) - 1) << 8))     /* include base? */
+686,690c822
+* 		    if ((rw & B_READ) && ((u.u_lcbmd[ts] & 07) != RW))
+* 			    goto bad;   /* right access?*/
+* 		    if ((u.u_lcbma[ts] +
+* 		      (((u.u_count + 63) >> 6) & 01777))
+* 			> lcba_size)    /* area to transfer too big? */
+---
+. 		    if (rw && ((u.u_lcbmd[ts] & 07) != RW)) /* right access?*/
+691a824,826
+. 		    if ((u.u_lcbma[ts] + ((u.u_count + 63 >> 6) & 01777))
+. 			> lcba_size)    /* area to transfer too big? */
+. 			    goto bad;
+716,736c851,862
+* #ifdef PASYNC
+* 	if (!async) {           /* jsq BBN 2-26-79 */
+* #endif
+* 		u.u_procp->p_flag =| SLOCK;
+* 		(*strat)(bp);
+* 		spl6();
+* 		while ((bp->b_flags&B_DONE) == 0)
+* 			sleep(bp, PRIBIO);
+* 		u.u_procp->p_flag =& ~SLOCK;
+* 		if (bp->b_flags&B_WANTED)
+* 			wakeup(bp);
+* 		spl0();
+* 		bp->b_flags =& ~(B_BUSY|B_WANTED);
+* 		u.u_count = (-bp->b_resid)<<1;
+* 		geterror(bp);
+* #ifdef PASYNC
+* 	} else {                /* jsq BBN 2-26-79 */
+* 		(*strat)(bp);
+* 		spl0();
+* 	}
+* #endif
+---
+. 	u.u_procp->p_flag =| SLOCK;
+. 	(*strat)(bp);
+. 	spl6();
+. 	while ((bp->b_flags&B_DONE) == 0)
+. 		sleep(bp, PRIBIO);
+. 	u.u_procp->p_flag =& ~SLOCK;
+. 	if (bp->b_flags&B_WANTED)
+. 		wakeup(bp);
+. 	spl0();
+. 	bp->b_flags =& ~(B_BUSY|B_WANTED);
+. 	u.u_count = (-bp->b_resid)<<1;
+. 	geterror(bp);
+740a867
+. #endif

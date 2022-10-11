@@ -1,0 +1,276 @@
+.TH LIBNET 3
+.SH NAME
+libnet \- Network library
+.IX "network library"
+.SH SYNOPSIS
+.nf
+Library definitions:
+	#include "netlib.h"
+	netnumb	net;
+	netaddr	addr;
+.sp
+Initialize the network library:
+	int	loadnetmap();
+	int	freenetmap();
+.sp
+Functions returning network number:
+	netnumb	getnet(name);	/* ascii name or number */
+	netnumb	thisnet();	/* local network number */
+.sp
+Functions returning network address:
+	netaddr	gethost(name);	/* ascii name or address */
+	netaddr	getnhost(name, net); /* name or address and net number */
+	netaddr	thishost(net);	/* local host address */
+.sp
+Convert network number to ascii:
+	char	*netname(net);		/* official name */
+	char	*netsyn(net, syn);	/* nickname(s) */
+	char	*netfmt(net, fmt);	/* ascii string */
+.sp
+Convert network address to ascii:
+	char	*hostname(addr);	/* official name */
+	char	*hostsyn(addr);		/* nicknames(s) */
+	char	*hostfmt(addr, fmt);	/* ascii string */
+	char	*dialnum(addr);		/* dial digits */
+	char	*thisname();		/* local host name */
+.sp
+Return host or network capability word:
+	unsigned netcap(net);	/* network capability */
+	unsigned hostcap(addr);	/* host capability */
+.sp
+Check network number or address:
+	#define	isanynet(net)
+	#define	isbadnet(net)
+	#define	isanyhost(addr)
+	#define	isbadhost(addr)
+	#define	iseqhost(addr1, addr2)
+.sp
+Miscellaneous functions:
+	int	hashost(addr, N);	/* hash host address */
+	int	islocal(addr);		/* is host on local net */
+	long	lhostnum(addr);		/* return NCP style host number */
+.fi
+.SH DESCRIPTION
+The network library contains functions which are used by programs
+to access a database, known as the host map, which contains the
+names and addresses of networks and hosts.
+.IX "Network library"
+It provides facilties for converting between binary and ascii
+host addresses.
+.SH DEFINITIONS
+All library definitions are provided by an include file
+.I (netlib.h)
+which contains definitions for the basic types
+.I netnumb
+(network number)
+and
+.I netaddr
+(network address),
+as well as for functions which return them.
+.SH INITIALIZATION
+Normally, the library is self-initializing.
+Calling any function which requires the information
+contained in the host map will cause the map to loaded
+into memory.  Afterward, the space used to store the map
+will be freed.  This mode of operation is suitable for
+programs which make a single call, perhaps to translate
+an ascii host address into a binary version.
+.PP
+For programs which make multiple accesses to the database
+(e.g., a mailer daemon), functions which explicitly load
+and free the map are provided.
+.I Loadnetmap
+loads the map and returns 1 if successful, 0 if any error occurred.
+It should be used before any calls to other library functions are made.
+.I Freenetmap
+simply frees the space used to store the map.
+It should be used when the host map information is no longer necessary.
+.PP
+Once the map is explicitly loaded (using \*iloadnetmap\*r)
+it will be automatically reloaded if it changes.
+.SH "ASCII TO BINARY CONVERSIONS"
+Several functions are provided which convert ascii strings to network
+numbers or addresses.
+In the following discussion, the term "number" will refer to any
+string of digits
+which are interpreted as decimal (the default) or octal, if a leading
+zero is present (e.g., 0177).
+.PP
+.IX getnet
+.IX isbadnet
+.I Getnet(name)
+accepts a string containing either a network name or number.
+It returns the corresponding binary network number
+as an object of type
+.I netnumb;
+the macro
+.I isbadnet(net)
+should be used to check for errors.
+.PP
+.IX gethost
+.IX getnhost
+.IX isbadhost
+.I Gethost(name)
+and
+.I getnhost(name, net)
+convert ascii host addresses to binary form.
+.I Gethost
+accepts addresses of the form
+.nf
+.sp
+	(hostname | address)[,(netname | number)]
+.sp
+.fi
+where
+.I hostname
+is the name of any known host
+and
+.I address
+is a numeric host address in the form
+.I host/imp.
+Optionally, this may be followed by the name or number of
+a specific network.
+(Leading and trailing white space is ignored.)
+If none is provided, all networks will be searched (for symbolic
+host names) or the number of the default local network (for numeric
+addresses).
+If a network is specified, only that network will be searched
+(for symbolic host names) or that network number will be used
+(for numeric addresses).
+.I Getnhost
+accepts a binary network number as its second argument
+and does not allow a network name or number to be contained
+in the first argument string.
+Both functions
+return objects of type
+.I netaddr;
+the macro
+.I isbadhost(addr)
+should be used to check for errors.
+.SH "BINARY TO ASCII CONVERSIONS"
+Six functions are provided to convert network numbers or addresses
+to ascii strings suitable for printing.
+.PP
+.IX netname
+.IX netsyn
+.IX netfmt
+.I Netname(net)
+returns the primary name of the network
+.I net
+and
+.I netsyn(net, nth)
+returns the
+.I nth
+synonym (alias or nickname)
+of
+.I net.
+(Synonym zero is the primary name; synonyms 1 through n are nicknames.)
+.I Netsyn
+returns NULL is a name does not exist.
+The function
+.I netfmt(net, fmt)
+returns the network number as a formatted ascii string (if
+.I fmt
+is zero) or the network name
+(if
+.I fmt
+is one.
+(I.e.,
+.I netname(net),
+.I netsyn(net, 0)
+and
+.I netfmt(net, 1)
+all produce the same result.)
+.PP
+.IX hostname
+.IX hostsyn
+.IX hostfmt
+Network addresses may be converted to strings using the functions
+.I hostname(addr),
+.I hostsyn(addr, syn)
+or
+.I hostfmt(addr, fmt).
+The first two behave similarly to
+.I netname
+and
+.I netsyn;
+.I hostfmt
+will produce a numeric host address only (if
+.I fmt
+is zero),
+an address and network number
+(if
+.I fmt
+is one)
+or an address and network name
+(if
+.I fmt
+is two).
+.SH "HOST AND NETWORK CAPABILITIES"
+.IX netcap
+.IX hostcap
+The network map provides space for storing capabilities
+of hosts and networks.
+This information may be accessed using the functions
+.I netcap(net)
+and
+.I hostcap(addr).
+Both
+return objects of type
+.I unsigned.
+Currently, three bits of network capability are used
+to indicate the addressing format of a network
+(see hostmap(5)).
+.PP
+For dialup networks,
+the function
+.I dialnum(addr)
+returns a pointer to a string of dial digits
+associated with the host address.
+.SH "LOCAL HOST INFORMATION"
+.IX thisname
+.IX thisnet
+.IX thishost
+Three functions provide information about local names and addresses.
+.I Thisname()
+returns a pointer to the name of the local host
+(actually the contents of the file
+.IR /etc/net/THISNAME ).
+The function
+.I thisnet()
+returns the network number of the default local network
+(as defined by the file
+.IR /etc/net/NETWORKS )
+and
+.I thishost(net)
+returns the local host address for the specified network.
+To get the address on the default local network,
+use
+.I thishost(ANYNET).
+The function
+.I islocal(addr)
+returns true (1) if the network address argument is on
+the local network.
+.SH "MISCELLANEOUS FUNCTIONS"
+The function
+.I hashost(addr, N)
+returns a hash value in the range 0 to N-1 computed from the network address.
+The function
+.I lhostnum(addr)
+returns a network kernel style address.
+.SH DIAGNOSTICS
+Macro functions are provided to check error returns from functions
+which return network numbers or addresses.
+Functions which return character pointers
+use NULL (0) to indicate errors.
+.SH FILES
+.nf
+/lib/libnet.a			The network library.
+/usr/include/netlib.h		Library definitions
+/etc/net/hostmap		Text host/number map.
+/etc/net/hostmap.bin		Binary host/number map.
+/etc/net/THISHOST		Local host name.
+/etc/net/NETWORKS		Local network addresses
+.fi
+.SH "SEE ALSO"
+host(1), telnet(1), ftp(1), hostmap(5)

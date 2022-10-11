@@ -1,0 +1,285 @@
+default: ../conf/libdmr
+rm -f now
+date>now
+
+rmobjects
+now
+rm -f *.o
+rm -f rmobjects
+date>rmobjects
+
+../conf/libdmr  ai
+  ar.o              bio.o             cat.o             cty.o \
+  dc.o              dn.o              hp.o              hs.o\
+  ht.o              kl.o              lp.o              mem.o\
+  partab.o          pc.o              rf.o              rk.o\
+  rp.o              sys.o             tc.o              tm.o\
+  tty.o             dhdm.o            dh.o              dhfdm.o\
+  ports.o           pty.o             dz.o              gnn3.o \
+  xtty.o            xpty.o
+ar r ../conf/libdmr %a
+
+ar.o
+ar.c \
+../h/param.h\
+../h/user.h
+ncc -c -O ar.c
+
+bio.o
+bio.c \
+../h/param.h\
+../h/user.h\
+../h/buf.h\
+../h/conf.h\
+../h/systm.h\
+../h/proc.h\
+../h/seg.h\
+../h/inode.h
+ncc -c -O bio.c
+
+cat.o
+cat.c \
+../h/param.h\
+../h/user.h\
+../h/tty.h
+ncc -c -O cat.c
+
+cty.o
+cty.c \
+../h/param.h\
+../h/user.h\
+../h/conf.h\
+../h/tty.h
+ncc -c -O cty.c
+
+dc.o
+dc.c \
+../h/param.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h\
+../h/conf.h\
+../h/buf.h
+ncc -c -O dc.c
+
+dh.o
+dh.c \
+../h/param.h\
+../h/conf.h\
+../h/inode.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h
+ncc -c -O dh.c
+
+dhdm.o
+dhdm.c \
+../h/param.h\
+../h/tty.h\
+../h/conf.h
+ncc -c -O dhdm.c
+
+dhfdm.o
+dhfdm.c \
+../h/tty.h\
+../h/conf.h
+ncc -c -O dhfdm.c
+
+dn.o
+dn.c \
+../h/param.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O dn.c
+
+dz.o
+dz.c \
+../h/param.h\
+../h/conf.h\
+../h/inode.h\
+../h/user.h\
+../h/tty.h
+ncc -c -O dz.c
+
+gnn.o
+gnn.c \
+../h/param.h\
+../h/conf.h\
+../h/buf.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h
+ncc -c -O gnn.c
+
+gnn3.o
+gnn3.c \
+../h/param.h\
+../h/conf.h\
+../h/buf.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h
+ncc -c -O gnn3.c
+
+hp-ecc.o
+hp-ecc.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/systm.h\
+../h/user.h\
+../h/reg.h
+ncc -c -O hp-ecc.c
+
+hp.o
+hp.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/systm.h\
+../h/user.h
+ncc -c -O hp.c
+
+hs.o
+hs.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O hs.c
+
+ht.o
+ht.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O ht.c
+
+kl.o
+kl.c \
+../h/param.h\
+../h/conf.h\
+../h/inode.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h
+ncc -c -O kl.c
+
+lp.o
+lp.c \
+../h/param.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O lp.c
+
+mem.o
+mem.c \
+../h/param.h\
+../h/user.h\
+../h/conf.h\
+../h/seg.h
+ncc -c -O mem.c
+
+partab.o
+partab.c
+ncc -c -O partab.c
+
+pc.o
+pc.c \
+../h/param.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O pc.c
+
+ports.o
+ports.c \
+../h/param.h\
+../h/systm.h\
+../h/conf.h\
+../h/user.h\
+../h/proc.h\
+../h/inode.h\
+../h/file.h\
+../h/reg.h
+ncc -c -O ports.c
+
+pty.o
+pty.c \
+../h/param.h\
+../h/conf.h\
+../h/inode.h\
+../h/user.h\
+../h/tty.h
+ncc -c -O pty.c
+
+rf.o
+rf.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O rf.c
+
+rk.o
+rk.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O rk.c
+
+rp.o
+rp.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O rp.c
+
+sys.o
+sys.c \
+../h/param.h\
+../h/conf.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h
+ncc -c -O sys.c
+
+tc.o
+tc.c \
+../h/param.h\
+../h/conf.h\
+../h/buf.h\
+../h/user.h
+ncc -c -O tc.c
+
+tm.o
+tm.c \
+../h/param.h\
+../h/buf.h\
+../h/conf.h\
+../h/user.h
+ncc -c -O tm.c
+
+tty.o
+tty.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/tty.h\
+../h/proc.h\
+../h/inode.h\
+../h/file.h\
+../h/reg.h\
+../h/conf.h
+ncc -c -O tty.c
+
+xtty.o
+xtty.c ../h/xty.h
+ncc -O -c xtty.c
+
+xpty.o
+xpty.c ../h/xty.h
+ncc -O -c xpty.c
+

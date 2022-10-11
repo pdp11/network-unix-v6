@@ -1,0 +1,450 @@
+.TH FTP 1
+.SH NAME
+ftp \*- file transfer program
+.IX "\*iftp\*r command"
+.IX "file transfer"
+.SH SYNOPSIS
+.B ftp
+[ host ]
+.SH DESCRIPTION
+\*iFtp\*r is an implementation of the
+ARPANET File Transfer Protocol
+.IX ARPANET
+for UNIX systems.
+It is capable of transferring
+ASCII and
+.IX ascii
+core-image files
+.IX "core image"
+between a UNIX
+host and other
+.IX host
+network hosts,
+.IX network
+of providing local users with current information about remote
+file systems,
+.IX "file system"
+and of providing a
+mail facility.
+.IX mail
+.PP
+When executed, \*iftp\*r attempts to establish communications
+with \*ihost\*r.
+If the argument is not present, or if \*ihost\*r is
+does not respond, \*iftp\*r will ask for another.
+\*iHost\*r may be any host identification recognizable to
+\*igethost\*r(3), which
+.IX \*igethost\*r
+accepts numerous formats.
+.PP
+If the request succeeds, the remote computer will respond
+with a message like \*(OQ300 CMU-10a FTP Server\*(CQ.
+All messages sent by the remote host begin with a 3-digit number,
+and generally indicate successful completion, or
+failure, of a request.
+The local \*iftp\*r will then
+prompt with a \*(SQ>\*(AP character,
+.IX prompt
+indicating that it is ready to accept commands.
+.PP
+\*iFtp\*r commands consist of a command name followed by arguments.
+The command name need not be fully typed \-
+only enough characters to resolve any
+ambiguities are necessary.
+.IX ambiguity
+Generally the first three characters are sufficient.
+For those commands requiring arguments,
+the arguments may follow the command name (as in the syntax below),
+or if none are specified, \*iftp\*r will ask for the particular arguments it needs.
+Unusual arguments (e.g.,
+pathnames with embedded spaces) may be quoted with
+.IX pathname
+single or double
+quotes.
+.IX quote
+A command summary follows.
+.PP
+\*bAccess Control Commands.\*r  These include the operations of
+identifying the
+user to the remote host, verifying the
+.IX user
+password,
+.IX password
+and recording
+accounting information.
+.IX "accounting information"
+.PP
+.TP 7
+\*blog\*r username [ password account ]
+This command identifies the user to the remote host, by supplying
+the  first  parameter.  If either a password or account number is
+requested by the remote host,  the  second  or  third  parameter,
+respectively,  is supplied to the host.  If the parameter was not
+typed, the user is prompted for it.  As with  the  \*iPass\*r  and
+\*iAccount\*r commands, below, the argument is not echoed when it
+is read after prompting.  (To type the account number on the same
+line  with  the  username and still be able to enter the password
+with echo supressed, enter a null  string,  i.e.  two  single  or
+double  quotes  as  the  second  parameter  of  the log command.)
+Unneeded parameters are ignored.   This  command  supercedes  the
+\*iUser\*r, \*iPass\*r, and \*iAccount\*r commands for most purposes.
+.PP
+.TP 7
+\*buser\*r username
+.br
+Generally this is the first command after the connection is established.
+\*iUsername\*r is the login identifier for the remote computer.
+.PP
+.TP 7
+\*bpassword\*r
+.br
+If the response to \*iuser\*r was \*(OQEnter Password\*(CQ,
+this command should be given.
+\*iFtp\*r will then ask for the password.
+Local echoing will be suppressed for security.
+.IX "local echo"
+.PP
+.TP 7
+\*baccount\*r (or \*bacct\*r)
+.br
+If the response to \*iuser\*r or \*ipassword\*r was \*(OQEnter Account\*(CQ,
+this command should be given.
+\*iFtp\*r will then ask for an account number.
+Local echoing will be suppressed for security.
+.i0
+.PP
+\*bData Transfer Specifications.\*r
+These describe the format of the data.
+Since all data transfer parameters have default values,
+these commands are only needed
+when special types of data are to be transferred.
+Specified parameters remain in force until reset.
+To find out what current parameter values are,
+the \*istatus\*r command (described under service commands) may be used.
+\*iFtp\*r only permits an 8-bit
+transfer byte size,
+.IX "transfer byte"
+which is the network default.
+.PP
+.TP 7
+\*btype\*r {\*bascii\*r, \*bimage\*r, \*blocal\*r}
+.br
+Specifies the data type.
+\*iascii\*r is default.
+.IX ascii
+\*iImage\*r means a
+core-image file.
+.IX "core image"
+Generally it is not very useful to transfer an image file to/from a machine
+that is not a PDP-11.
+\*iLocal\*r means that each host should use its own idea of the appropriate format.
+.PP
+.TP 7
+\*bmode\*r {\*bstream\*r, \*btext\*r}
+.br
+Specifies the
+transfer mode to be used.
+.IX "transfer mode
+\*iStream\*r is default.
+\*iText\*r may be used for \*iascii\*r files only.
+It is better with record - structured files than \*istream\*r,
+which cannot embed <EOR> and <EOF> control codes in the data stream.
+.PP
+.TP 7
+\*bstructure\*r {\*bfile\*r, \*brecord\*r}
+.br
+Sets the \*bstructure\*r of the file to be transferred.
+Ordinary UNIX files have \*ifile\*r structure.
+Some remote systems may partition files into \*irecords\*r.
+When \*irecord\*r is set, the following mapping occurs:
+on input each <EOR> becomes a newline
+and on output each newline becomes an <EOR>.
+.IX newline
+.i0
+.PP
+\*bService Commands.\*r
+These cause the files to be transferred, and also
+request the remote host to perform various actions.
+.PP
+.TP 7
+\*bretrieve\*r remotefile localfile
+.br
+.TP 7
+\*bget\*r remotefile localfile
+.br
+The remote \*iftp\*r will transfer the file \*iremotefile\*r to
+the local \*iftp\*r process,
+which will store it as \*ilocalfile\*r.
+.TP 7
+\*bcmdget\*r remotefile command
+.br
+The remote \*iftp\*r will transfer the file \*iremotefile\*r to
+the local \*iftp\*r process,
+which will pipe it into command, which may be any valid shell statement
+capable of acting as a filter.
+.TP 7
+\*bmretrieve\*r remfgd [-flags]
+.br
+.TP 7
+\*bmget\*r remfgd [-flags]
+.br
+\*iRemfgd\*r is a \*iremote file group descriptor\*r, that is, a
+string that the operating system of the remote host will recognize as a
+string specifying a group of files.  \*iFlags\*r specifies 
+the transformations to perform on the
+file names to create local file names.
+The flags may be used in combination (except \*i\*r and \*iT\*r
+cannot be used together).  The flag argument begins with a
+hyphen.  If the argument is omitted, the local file name is the same
+as the remote file name.
+This command uses the NLST protocol to obtain the list of names of
+files on the remote host.
+Currently defined flags are:
+.sp 1
+.TP 5
+T
+Tenex/Tops20-mode: strips the <\*E> directory and the protection
+information from the filename,
+removes control-Vs,
+replaces Tenex\*(APs semi-colons before the version number with periods,
+and converts to lower case.
+.sp
+.TP 5
+I
+ITS mode: strips the "DSK: DIR;" from the beginning of the filename,
+converts letters in the filename to lower case, and replaces spaces with
+under-scores.
+.sp
+.TP 5
+l
+convert uppercase to lowercase.
+.sp
+.TP 5
+a
+alphanumerics only (NOTE: periods are regarded as numeric)
+.sp
+.TP 5
+p/pre/
+
+.br
+prefixes the string "pre" onto each filename (\*(SQ\\\*(AP will escape
+\*(SQ/\*(AP)
+.sp
+.TP 5
+?
+rather than try to transform the remote filename into a acceptable UNIX
+filename, the program will ask the user what name to use.
+.PP
+.TP 7
+\*bstore\*r localfile remotefile
+.br
+.TP 7
+\*bsend\*r localfile remotefile
+.br
+The UNIX file \*ilocalfile\*r is stored at the remote host under the name
+\*iremotefile\*r.
+.PP
+.TP 7
+\*bcmdsend\*r command remotefile
+.br
+The output of command is stored at the remote host under the name
+\*iremotefile\*r.  Command may be any valid shell statement.
+.PP
+.TP 7
+*Bmstore\*r localfgd
+.br
+.TP 7
+\*bmsend\*r localfgd
+.br
+\*ilocalfgd\*r is a string definging a group of files; the syntax is 
+the same as that used by the shell (see \*ish\*r(1))
+to define files. They are stored on the
+remote host with the same name as they have on the local host.
+.PP
+.i0
+NOTE: The following three commands (mstore/msend, mkdir, rmdir) 
+use experimental protocols
+which are currently available only at BBN UNIX sites.
+.PP
+.TP 7
+\*bmstore\*r localroot remroot
+.br
+.TP 7
+\*bmsend\*r localroot remroot
+.br
+The directory tree rooted at \*ilocalroot\*r is recursively examined, and the 
+files in these directories are
+stored on the remote
+host in a tree rooted at \*iremroot\*r.
+All necessary directories are created.
+.PP
+.TP 7
+\*bmkdir\*r directory
+\*idirectory\*r is created on the remote host.
+.PP
+.TP 7
+\*brmdir\*r directory
+\*idirectory\*r is removed from the remote host.
+.PP
+.TP 7
+\*bappend\*r localfile remotefile
+.br
+If \*iremotefile\*r exists,
+the data from \*ilocalfile\*r will be appended to it instead of
+overwriting it.
+If \*iremotefile\*r does not exist, it will be created.
+.PP
+.TP 7
+\*brename\*r from to
+.br
+The remote file \*ifrom\*r will subsequently be
+known as the remote file \*ito\*r.
+.PP
+.TP 7
+\*bdelete\*r remotefile
+.br
+\*iRemotefile\*r is deleted from the remote system.
+.PP
+.TP 7
+\*bstatus\*r [ pathname ]
+.PP
+If \*ipathname\*r is not given,
+the remote \*iftp\*r will respond with its current status
+(e.g., current parameter settings).
+If \*ipathname\*r is a file,
+the response is information about the file;
+and if \*ipathname\*r is a directory,
+the response is information about all files in the directory.
+.PP
+.TP 7
+\*blist\*r pathname localfile
+.br
+\*iList\*r requires \*ipathname\*r to be a file or directory
+on the remote system.
+The response is the same as to the \*istatus\*r request,
+except that it is stored in \*ilocalfile\*r
+and is not displayed on the user\*(APs terminal.
+.PP
+.TP 7
+\*bnlst\*r pathname localfile
+.br
+This command is like the \*ilist\*r command, except that \*inlst\*r
+is guaranteed on return only a list of names, whereas \*ilist\*r may
+return some status information when pathname specifies a single file.
+With some hosts,
+notably those using \*iTenex\*r, this can produce more information
+than \*ilist\*r because qualifying information about the files
+is returned imbedded in the file name strings.
+.PP
+.TP 7
+\*bcwd\*r pathname
+.br
+This command, if implemented by the remote server, will change the
+working directory to that indicated by \*ipathname\*r.  The interpretation
+of subsequent \*ipathnames\*r used in other commands will be affected
+according to the remote system's concept of working directory.  Some
+systems have no such concept, in which case a negative reply (usually
+500 - no such command -)  will be
+returned, and further commands will be interpreted exactly as if the
+\*icwd\*r command had not been issued.
+.PP
+.TP 7
+\*bmail\*r [ user ]
+.br
+\*iUser\*r must be a system identification or
+the standard NIC network identification
+of a user at the remote computer.
+If \*iuser\*r is not given,
+the mail will be sent to a standard system mailbox.
+If the remote \*iftp\*r accepts the request,
+it will ask for the letter.
+The end of the letter is a line with a single period on it.
+.PP
+.TP 7
+\*bmlfl\*r localfile [ user ]
+.br
+This command will mail the UNIX file \*ilocalfile\*r
+to \*iuser\*r at the remote system.
+\*iUser\*r must be a valid identification as described in \*bmail\*r.
+Note that \*ilocalfile\*r must be ASCII and that the data transfer parameters
+\*imode\*r and \*itype\*r are reset to their default values.
+.PP
+.TP 7
+\*bquote\*r command [ argument ]
+.br
+This command allows an arbitrary command to be sent to the remote \*iftp\*r
+server program.  \*iCommand\*r and \fargument\*r
+may be a single words such as \*iNOOP\*r,
+or an arbritrary strings enclosed in quotes.  Command will be truncated
+to four characters.  Argument, if present, will be appended to the truncated
+command separated by one space, and the resulting command line sent.
+The \*iquote\*r command might
+be used to send an experimental command to the remote \*iftp\*r server.
+(Experimental commands may be implemented by any server and always start
+with "X".)  Sending NOOP is a way of checking if the remote server is
+functioning without other side effects.  (A healthy server will return
+a 200 reply promptly.)  \*iFtp\*r will wait for any final reply
+before returning to prompt level.  It may be brought back to prompt level
+arbitrarily by typing INTERRUPT, however.
+.PP
+.TP 7
+\*bbye\*r
+\*bquit\*r
+.br
+Connections are
+closed and the user is returned to the UNIX shell.
+.IX close
+.i0
+.PP
+\*bMiscellaneous.\*r
+.PP
+.TP 13
+\*b!\*r
+\Creates a temporary
+subshell.
+.IX subshell
+This is useful for verifying the results of file transfers.
+Note that \*iftp\*r connections to the remote host remain open,
+tying up valuable system resources at both ends.
+Therefore a user should not remain in a
+subshell for any longer than necessary.
+.PP
+.TP 13
+\*bhelp\*r
+describes available commands.
+.PP
+.TP 13
+\*bcd\*r
+acts just like the UNIX \*ichdir\*r command.
+.PP
+.TP 13
+.IX interrupt
+\*b<INTERRUPT>\*r
+Interrupting \*iftp\*r with
+an INTERRUPT (DEL) character
+causes a network interrupt to be sent to the remote \*iftp\*r,
+followed by a request to abort any ongoing data transfer.
+The remote computer should reply indicating whether any transfer was aborted.
+The user may resume normal use of \*iftp\*r afterwards.
+.PP
+.TP 13
+.IX panic
+\*b<QUIT>\*r
+Panic \- the QUIT (FS) character should only be used when
+the connections appear to be
+hopelessly
+confused (for example, if the remote host crashes)
+or \*iftp\*r appears to be hanging without cause.
+All local connections are broken and the user is returned to the UNIX shell.
+.i0
+.SH FILES
+/etc/net/ftpmain        User-\*iftp\*r process.
+.br
+/etc/net/ftptty         Foreign-response processor.
+.br
+/etc/net/aliases        User names for mail identification.
+.IX \*i/etc/net/ftpmain\*r
+.IX \*i/etc/net/ftptty\*r
+.IX \*i/etc/net/aliases\*r
+.SH "SEE ALSO"
+con(1), telnet(1), libn(3), gethost(2).

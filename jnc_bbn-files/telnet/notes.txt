@@ -1,0 +1,47 @@
+Notes on the Combined THP/TELNET Program
+
+by Dan Franklin
+
+This directory contains all the pieces needed for telnet,
+thp, and tcp_telnet. Important files are:
+
+BUILD.INFO
+    Makes a telnet, thp, or tcp_telnet. Moderately baroque.
+
+globdefs.h
+    Among other things, this file has a #define of NEWTTY. If your
+    system doesn't have the new TTY driver, this #define should be
+    commented out. The LOGGING #define is used to include or not
+    include the logging code. Even if the code is included, it is
+    not invoked unless the ^open command so specifies; thus, all you
+    lose if it is included is the space it takes up.
+
+nettty.c
+    Unlike all the other .c files in this directory, nettty.c is
+    used to make a separate program, which should be moved to
+    /etc/nettty. nettty is called by the "^stty" command of telnet/thp.
+    It is just like stty, but puts out CRLF instead of LF, thus
+    assuring proper formatting of its information even when CRMOD
+    (-nl mode) is not set, as it rarely is during a network connection.
+
+tcplib.c tcpstru.h
+    These files are Mike Wingfield's TCP library routines.
+    I have not changed them at all.
+
+netlib.a
+    This archive exists mainly for my convenience. It contains those
+    files which I hardly ever change during THP/TELNET development.
+    Also, some of its files are not always loaded, depending on
+    what the program being built is.
+
+xthpserv, xtelserv
+    These shell files set up a thp or tcp_telnet server using the version
+    in the current directory. Useful for testing.
+
+thptest
+    Sets up a one-time thp under adb, and gets a stack trace when it dies.
+    If thp ever blows up, you should try to duplicate it with this shell file.
+
+telserv, thpserv
+    The real, true shell files for setting up tcp_telnet and thp (respectively)
+    servers.

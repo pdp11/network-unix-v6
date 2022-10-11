@@ -1,0 +1,455 @@
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+____NAME
+     ftp - file transfer program
+
+________SYNOPSIS
+     ___     ftp [ host ]
+
+___________DESCRIPTION
+     ___     Ftp is  an  implementation  of  the  ARPANET  File  Transfer
+     Protocol  for  UNIX  systems.  It is capable of transferring
+     ASCII and core-image files between a  UNIX  host  and  other
+     network   hosts,  of  providing  local  users  with  current
+     information about remote file systems, and  of  providing  a
+     mail facility.
+
+                    ___     When executed, ftp attempts to establish communications with
+     ____                                            ____     host.   If  the  argument is not present, or if host is does
+                  ___                        ____     not respond, ftp will ask for another.  Host may be any host
+                                       _______     identification  recognizable  to  gethost(3),  which accepts
+     numerous formats.
+
+     If the request succeeds, the remote  computer  will  respond
+     with  a message like "300 CMU-10a FTP Server".  All messages
+     sent by the remote host begin with  a  3-digit  number,  and
+     generally  indicate  successful completion, or failure, of a
+                            ___     request.   The  local  ftp  will  then  prompt  with  a  '>'
+     character, indicating that it is ready to accept commands.
+
+     ___     Ftp  commands  consist  of  a  command  name   followed   by
+     arguments.   The command name need not be fully typed - only
+     enough characters to resolve any ambiguities are  necessary.
+     Generally  the  first  three characters are sufficient.  For
+     those commands requiring arguments, the arguments may follow
+     the  command  name  (as in the syntax below), or if none are
+                ___     specified, ftp will ask  for  the  particular  arguments  it
+     needs.   Unusual  arguments  (e.g.,  pathnames with embedded
+     spaces) may be quoted  with  single  or  double  quotes.   A
+     command summary follows.
+
+     ______ _______ ________     Access Control Commands.  These include  the  operations  of
+     identifying  the  user  to  the  remote  host, verifying the
+     password, and recording accounting information.
+
+     ___     log username [ password account ]
+            This command identifies the user to the remote  host,
+            by  supplying  the   first   parameter.   If either a
+            password or account number is requested by the remote
+            host,     the     second    or    third    parameter,
+            respectively,  is  supplied  to  the  host.   If  the
+            parameter was not typed, the user is prompted for it.
+                          ____      _______            As with  the  Pass  and Account commands, below,  the
+            argument   is  not  echoed  when  it  is  read  after
+
+
+
+Printed 8/3/81                                                  1
+
+
+
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+            prompting.  (To type the account number on  the  same
+            line   with  the  username and still be able to enter
+            the  password  with  echo  supressed,  enter  a  null
+            string,   i.e.   two   single   or double  quotes  as
+            the   second   parameter   of   the   log   command.)
+            Unneeded  parameters  are  ignored.    This   command
+                            ____  ____      _______            supercedes  the User, Pass, and Account commands  for
+            most purposes.
+
+     ____     user username
+            Generally  this  is  the  first  command  after   the
+                                           ________            connection  is  established.   Username  is the login
+            identifier for the remote computer.
+
+     ________     password
+                               ____            If the response to user was  "Enter  Password",  this
+                                        ___            command  should  be given.  Ftp will then ask for the
+            password.   Local  echoing  will  be  suppressed  for
+            security.
+
+     _______     ____     account (or acct)
+                                  ____      ________            If the  response  to  user  or  password  was  "Enter
+                                                         ___            Account",  this  command  should  be given.  Ftp will
+            then ask for an account number.  Local  echoing  will
+            be suppressed for security.
+
+     ____ ________ ______________     Data Transfer Specifications.  These describe the format  of
+     the  data.   Since all data transfer parameters have default
+     values, these commands are only needed when special types of
+     data  are to be transferred.  Specified parameters remain in
+     force until reset.   To  find  out  what  current  parameter
+                        ______     values  are,  the  status  command  (described under service
+                             ___     commands) may be used.  Ftp only permits an  8-bit  transfer
+     byte size, which is the network default.
+
+     ____  _____  _____  _____     type {ascii, image, local}
+                                      _____                 _____            Specifies the data type.  ascii  is  default.   Image
+            means  a  core-image  file.  Generally it is not very
+            useful to transfer an image file  to/from  a  machine
+                                       _____            that  is  not  a  PDP-11.  Local means that each host
+            should use its own idea of the appropriate format.
+
+     ____  ______  ____     mode {stream, text}
+                                                       ______            Specifies the transfer mode to be  used.   Stream  is
+                       ____                 _____            default.   Text may be used for ascii files only.  It
+                                                          ______            is better with record - structured files than stream,
+            which  cannot  embed <EOR> and <EOF> control codes in
+            the data stream.
+
+     _________  ____  ______     structure {file, record}
+                     _________            Sets the structure of the  file  to  be  transferred.
+
+
+
+Printed 8/3/81                                                  2
+
+
+
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+                                     ____            Ordinary UNIX files have file structure.  Some remote
+                                                  _______            systems  may  partition  files  into  records.   When
+            ______            record is set, the following mapping occurs: on input
+            each <EOR> becomes  a  newline  and  on  output  each
+            newline becomes an <EOR>.
+
+     _______ ________     Service Commands.  These cause the files to be  transferred,
+     and also request the remote host to perform various actions.
+
+     ________     retrieve remotefile localfile
+
+     ___     get remotefile localfile
+                       ___                         __________            The remote ftp will transfer the file  remotefile  to
+                        ___            the  local  ftp  process,  which  will  store  it  as
+            _________            localfile.
+
+     ______     cmdget remotefile command
+                       ___                         __________            The remote ftp will transfer the file  remotefile  to
+                        ___            the  local  ftp  process,  which  will  pipe  it into
+            command, which  may  be  any  valid  shell  statement
+            capable of acting as a filter.
+
+     _________     mretrieve remfgd [-flags]
+
+     ____     mget remfgd [-flags]
+            ______      ______ ____ _____ __________            Remfgd is a remote file group descriptor, that is,  a
+            string  that  the operating system of the remote host
+            will recognize as a  string  specifying  a  group  of
+                      _____            files.    Flags   specifies  the  transformations  to
+            perform on the file names to create local file names.
+                                                                _            The  flags  may be used in combination (except  and T
+            cannot be used together).  The flag  argument  begins
+            with a hyphen.  If the argument is omitted, the local
+            file name is the same as the remote file name.   This
+            command  uses the NLST protocol to obtain the list of
+            names of files on the remote host.  Currently defined
+            flags are:
+
+
+     T    Tenex/Tops20-mode: strips the <. . .> directory and the
+          protection   information  from  the  filename,  removes
+          control-Vs, replaces  Tenex's  semi-colons  before  the
+          version  number  with  periods,  and  converts to lower
+          case.
+
+
+     I    ITS mode: strips the "DSK: DIR;" from the beginning  of
+          the filename, converts letters in the filename to lower
+          case, and replaces spaces with under-scores.
+
+
+
+
+
+Printed 8/3/81                                                  3
+
+
+
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+     l    convert uppercase to lowercase.
+
+
+     a    alphanumerics  only  (NOTE:  periods  are  regarded  as
+          numeric)
+
+
+     p/pre/
+
+          prefixes the string "pre" onto each filename ('\'  will
+          escape '/')
+
+
+     ?    rather than try to transform the remote filename into a
+          acceptable UNIX filename, the program will ask the user
+          what name to use.
+
+     _____     store localfile remotefile
+
+     ____     send localfile remotefile
+                          _________            The UNIX file localfile is stored at the remote  host
+                           __________            under the name remotefile.
+
+     _______     cmdsend command remotefile
+            The output of command is stored at  the  remote  host
+                            __________            under  the name remotefile.  Command may be any valid
+            shell statement.
+
+     *Bmstore localfgd
+
+     _____     msend localfgd
+            ________            localfgd is a string definging a group of files;  the
+            syntax  is  the  same  as that used by the shell (see
+            __            sh(1)) to define files. They are stored on the remote
+            host  with  the  same  name as they have on the local
+            host.
+
+     NOTE: The following  three  commands  (mstore/msend,  mkdir,
+     rmdir)   use  experimental  protocols  which  are  currently
+     available only at BBN UNIX sites.
+
+     ______     mstore localroot remroot
+
+     _____     msend localroot remroot
+                                         _________            The directory tree rooted at localroot is recursively
+            examined,  and  the  files  in  these directories are
+            stored on  the  remote  host  in  a  tree  rooted  at
+            _______            remroot.  All necessary directories are created.
+
+     _____     mkdir directory
+            _________            directory is created on the remote host.
+
+
+
+Printed 8/3/81                                                  4
+
+
+
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+     _____     rmdir directory
+            _________            directory is removed from the remote host.
+
+     ______     append localfile remotefile
+               __________                       _________            If remotefile exists, the data from localfile will be
+            appended   to  it  instead  of  overwriting  it.   If
+            __________            remotefile does not exist, it will be created.
+
+     ______     rename from to
+                            ____            The remote file from will subsequently  be  known  as
+                            __            the remote file to.
+
+     ______     delete remotefile
+            __________            Remotefile is deleted from the remote system.
+
+     ______     status [ pathname ]
+
+        ________                          ___     If pathname is not given, the remote ftp will  respond  with
+     its  current  status (e.g., current parameter settings).  If
+     ________     pathname is a file, the response is  information  about  the
+                     ________     file;  and  if  pathname  is  a  directory,  the response is
+     information about all files in the directory.
+
+     ____     list pathname localfile
+            ____          ________            List requires pathname to be a file or  directory  on
+            the  remote  system.   The response is the same as to
+                ______            the status request,  except  that  it  is  stored  in
+            _________            localfile   and   is  not  displayed  on  the  user's
+            terminal.
+
+     ____     nlst pathname localfile
+                                     ____            This command is like the list  command,  except  that
+            ____            nlst  is  guaranteed  on return only a list of names,
+                    ____            whereas list may return some status information  when
+            pathname  specifies  a single file.  With some hosts,
+                                 _____            notably those using  Tenex,  this  can  produce  more
+                              ____            information  than list because qualifying information
+            about the files is returned imbedded in the file name
+            strings.
+
+     ___     cwd pathname
+            This command, if implemented by  the  remote  server,
+            will  change  the working directory to that indicated
+                ________            by  pathname.   The  interpretation   of   subsequent
+            _________            pathnames  used  in  other  commands will be affected
+            according to the remote system's concept  of  working
+            directory.   Some  systems  have  no such concept, in
+            which case a negative reply (usually 500  -  no  such
+            command  -)   will  be returned, and further commands
+                                                  ___            will be interpreted exactly as if the cwd command had
+            not been issued.
+
+
+
+Printed 8/3/81                                                  5
+
+
+
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+     ____     mail [ user ]
+            ____            User must be a system identification or the  standard
+            NIC  network  identification  of a user at the remote
+                          ____            computer.  If user is not given,  the  mail  will  be
+                                                              ___            sent to a standard system mailbox.  If the remote ftp
+            accepts the request, it will ask for the letter.  The
+            end  of  the letter is a line with a single period on
+            it.
+
+     ____     mlfl localfile [ user ]
+                                                    _________            This command will mail the  UNIX  file  localfile  to
+            ____                             ____            user  at  the  remote  system.   User must be a valid
+                                               ____            identification  as  described  in  mail.   Note  that
+            _________            localfile  must  be  ASCII and that the data transfer
+                       ____     ____            parameters mode and type are reset to  their  default
+            values.
+
+     _____     quote command [ argument ]
+            This command allows an arbitrary command to  be  sent
+                             ___                     _______            to  the  remote  ftp  server  program.   Command  and
+                                                    ____            rgument may be a single words such  as  NOOP,  or  an
+            arbritrary  strings enclosed in quotes.  Command will
+            be  truncated  to  four  characters.   Argument,   if
+            present,  will  be  appended to the truncated command
+            separated by one space,  and  the  resulting  command
+                              _____            line  sent.   The quote command might be used to send
+                                                     ___            an experimental command to  the  remote  ftp  server.
+            (Experimental  commands  may  be  implemented  by any
+            server and always start with "X".)  Sending NOOP is a
+            way  of  checking if the remote server is functioning
+            without other side effects.  (A healthy  server  will
+                                            ___            return  a 200 reply promptly.)  Ftp will wait for any
+            final reply before returning to prompt level.  It may
+            be brought back to prompt level arbitrarily by typing
+            INTERRUPT, however.
+
+     ___    ____     bye    quit
+            Connections are closed and the user  is  returned  to
+            the UNIX shell.
+
+     _____________     Miscellaneous.
+
+     !            Creates a temporary subshell.  This  is  useful
+                  for  verifying  the  results of file transfers.
+                            ___                  Note that ftp connections to  the  remote  host
+                  remain open, tying up valuable system resources
+                  at both ends.   Therefore  a  user  should  not
+                  remain  in  a  subshell  for  any  longer  than
+                  necessary.
+
+
+
+
+
+Printed 8/3/81                                                  6
+
+
+
+
+
+
+FTP(1)              UNIX Programmer's Manual               FTP(1)
+
+
+
+     ____     help         describes available commands.
+
+     __                                   _____     cd           acts just like the UNIX chdir command.
+
+      _________                 ___     <INTERRUPT>  Interrupting  ftp  with  an   INTERRUPT   (DEL)
+                  character causes a network interrupt to be sent
+                                ___                  to the remote ftp, followed  by  a  request  to
+                  abort  any  ongoing  data transfer.  The remote
+                  computer should reply  indicating  whether  any
+                  transfer  was  aborted.   The  user  may resume
+                                ___                  normal use of ftp afterwards.
+
+      ____     <QUIT>       Panic - the QUIT (FS) character should only  be
+                  used   when   the   connections  appear  to  be
+                  hopelessly confused (for example, if the remote
+                                      ___                  host  crashes)  or  ftp  appears  to be hanging
+                  without  cause.   All  local  connections   are
+                  broken  and  the  user  is returned to the UNIX
+                  shell.
+
+_____FILES
+                                  ___     /etc/net/ftpmain        User-ftp process.
+     /etc/net/ftptty         Foreign-response processor.
+     /etc/net/aliases        User names for mail identification.
+
+___ ____SEE ALSO
+     con(1), telnet(1), libn(3), gethost(2).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Printed 8/3/81                                                  7
+
+
+

@@ -1,0 +1,3 @@
+The command "Makeit" is a shell script which compiles and installs everything.
+
+The command "Cleanup" is a shell script which removes object files.

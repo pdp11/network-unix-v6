@@ -1,0 +1,43 @@
+default: unix
+rm -f now
+date>now
+
+unix
+libraries conf/l.o conf/m70.o conf/c.o conf/ldncp conf/ldken conf/libdmr
+cd conf
+bigld -x -r -d l.o m70.o c.o ldncp ldken libdmr
+syms -ug a.out
+sysfix a.out ../unix
+cd ..
+date
+
+rmobjects
+now
+cd ken
+build rmobjects
+cd ../dmr
+build rmobjects
+cd ../ncpkernel
+build rmobjects
+cd ../conf
+build rmobjects
+cd ../progs
+build rmobjects
+cd ..
+rm -f rmobjects
+date>rmobjects
+
+libraries
+now
+cd ken
+build ../conf/ldken
+cd ../dmr
+build ../conf/libdmr
+cd ../ncpkernel
+build ../conf/ldncp
+cd ../conf
+build testfile
+cd ..
+rm -f libraries
+date>libraries
+

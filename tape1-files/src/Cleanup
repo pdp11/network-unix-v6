@@ -1,0 +1,5 @@
+for i in libbbn libnet libstr ftp host telnet
+do
+	echo Cleaning $i:
+	(cd $i; make cleanup)
+done

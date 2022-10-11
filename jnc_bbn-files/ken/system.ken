@@ -1,0 +1,21 @@
+cd ../ken
+echo "Loading ken"
+ld -x -r \
+	alloc.o		awaitr.o	clock.o		fio.o\
+	iget.o          main.o          malloc.o\
+	nami.o          pipe.o          prf.o\
+	rdwri.o         sig.o           slp.o\
+	subr.o          sys1.o          sys2.o\
+	sys3.o          sys4.o          sysent.o\
+	proc_util.o     text.o          trap.o          table.o
+
+mv a.out ../conf/ldken
+
+chdir ../conf
+echo Loading
+ld -x l.o m40.o c.o ldken libdmr
+syms -ug a.out
+size a.out
+mv a.out ../unix
+echo 'Done - output is ../unix'
+

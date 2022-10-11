@@ -1,0 +1,173 @@
+default: ncpkernel
+rm -f now
+date>now
+
+rmobjects
+now
+rm -f *.o
+rm -f rmobjects
+date>rmobjects
+
+../conf/ldncp
+btest.o \
+contab.o \
+imp11a.o \
+impio.o \
+kerbuf.o \
+ncpio.o \
+nopcls.o \
+nrdwr.o \
+rawmain.o \
+rawmisc.o \
+rawtable.o
+ld -x -r *.o
+mv a.out ../conf/ldncp
+
+btest.o
+btest.c \
+../h/param.h \
+../h/netparam.h \
+../h/user.h \
+../h/reg.h \
+../h/net.h
+ncc -c -O btest.c
+
+contab.o
+contab.c \
+../h/param.h \
+../h/netparam.h \
+../h/contab.h \
+../h/net.h
+ncc -c -O contab.c
+
+imp11a.o
+imp11a.c \
+../h/param.h \
+../h/netparam.h \
+../h/user.h \
+../h/buf.h \
+../h/net.h \
+../h/netbuf.h \
+../h/imp11a.h \
+../h/imp.h \
+../h/file.h \
+../h/ncp.h \
+../h/contab.h
+ncc -c -O imp11a.c
+
+impio.o
+impio.c \
+../h/param.h\
+../h/netparam.h\
+../h/user.h\
+../h/buf.h\
+../h/net.h\
+../h/netbuf.h\
+../h/imp.h\
+../h/hosthost.h\
+../h/proc.h\
+../h/file.h\
+../h/ncp.h\
+../h/contab.h
+ncc -c -O impio.c
+
+kerbuf.o
+kerbuf.c \
+../h/param.h\
+../h/netparam.h\
+../h/buf.h\
+../h/netbuf.h\
+../h/net.h\
+../h/imp.h\
+../h/contab.h
+ncc -c -O kerbuf.c
+
+ncpio.o
+ncpio.c \
+../h/param.h\
+../h/netparam.h\
+../h/file.h\
+../h/buf.h\
+../h/netbuf.h\
+../h/user.h\
+../h/net.h\
+../h/ncp.h\
+../h/inode.h\
+../h/contab.h
+ncc -c -O ncpio.c
+
+nopcls.o
+nopcls.c \
+../h/param.h\
+../h/netparam.h\
+../h/inode.h\
+../h/file.h\
+../h/ncp.h\
+../h/net.h\
+../h/netopen.h\
+../h/user.h\
+../h/conf.h\
+../h/reg.h\
+../h/contab.h\
+../h/systm.h
+ncc -c -O nopcls.c
+
+nrdwr.o
+nrdwr.c \
+../h/param.h\
+../h/netparam.h\
+../h/net.h\
+../h/inode.h\
+../h/buf.h\
+../h/user.h\
+../h/hosthost.h\
+../h/file.h\
+../h/reg.h\
+../h/contab.h
+ncc -c -O nrdwr.c
+
+rawmain.o
+rawmain.c \
+../h/param.h\
+../h/netparam.h\
+../h/user.h\
+../h/file.h\
+../h/inode.h\
+../h/reg.h\
+../h/buf.h\
+../h/net.h\
+../h/netbuf.h\
+../h/imp.h\
+../h/rawnet.h
+ncc -c -O rawmain.c
+
+rawmisc.o
+rawmisc.c \
+../h/param.h\
+../h/netparam.h\
+../h/user.h\
+../h/file.h\
+../h/inode.h\
+../h/reg.h\
+../h/buf.h\
+../h/net.h\
+../h/netbuf.h\
+../h/imp.h\
+../h/rawnet.h
+ncc -c -O rawmisc.c
+
+rawtable.o
+rawtable.c \
+../h/param.h\
+../h/netparam.h\
+../h/user.h\
+../h/file.h\
+../h/inode.h\
+../h/reg.h\
+../h/buf.h\
+../h/net.h\
+../h/netbuf.h\
+../h/imp.h\
+../h/rawnet.h
+ncc -c -O rawtable.c
+

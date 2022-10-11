@@ -1,0 +1,4 @@
+lint -DTCP user_2p.c process.c cmds.c options.c globals.c args.c ttyctl.c \
+ tel.c netc.c
+
+lint -DTCP netser.c

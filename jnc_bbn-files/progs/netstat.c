@@ -1,0 +1,862 @@
+#
+/*
+ * ncc -sO netstat.c -ln -lj
+ */
+
+#include "../h/param.h"
+#include "../h/netparam.h"
+#include "../h/leader.h"
+#include "../h/contab.h"
+#include "../h/net.h"
+
+char *hs_file "/etc/host_status";
+/*
+module name:
+	netstat.c
+
+function:
+	a program to display the status of connections on the arpa network
+
+globals contained:
+	r_contab
+	w_contab
+	rfnm_map
+	socket
+	hstat_tab
+	reasons
+	days
+	corefd
+	coreref
+
+routines contained:
+	main
+	pr_con
+	pr_skt
+	pr_ldr
+	find_symbol
+	seek_to
+	host_status
+	printoptions
+	printflags
+
+modules referenced:
+	../contab.h
+	../net.h
+
+modules referencing:
+
+history:
+	Designed and coded by Mark Kampe, UCLA-ATS, 3/76 as a debugging aid
+	Modified by Dan Franklin 7/14/78 to show flags as letters instead of octal #;
+	   added -f option to explain meaning of flags
+	   and made to do -c if no args supplied
+	Modified by Dan Franklin ????? to print entire foreign socket number
+		added -o option to print link and socket numbers in octal
+	Modified by Dan Franklin 9/12/78 to check that userid is indeed in table
+		and print ?? if it is not recognized.
+        Modified by Dan Franklin 9/15/78 to use locvo and locv to print 32-bit
+                socket number instead of using longs
+	long host mods jsq bbn 1-31-79
+	changed so reading from /etc/host_status and /usr/net/lhnames (rdhosts)
+		is done only when needed jsq BBN 3-20-79
+
+*/
+#define true 0177777
+#define false 000000
+#define then  /**/
+
+ int corefd, octal;     /* octal is nonzero if octal format desired */
+ char *coreref {"/dev/kmem"};
+ struct rdskt socket;
+ struct leader  leader;
+ int rfnm_map[LIMPS];
+struct hstat_tab {
+	long hs_host;
+	int hs_up;
+} hstat_tab[host_ken];
+
+long gethost(), stolhost();
+char *hostname(), puthost();
+long localhost;
+int localnet;
+
+/**/
+char *reasons[]
+{
+	"Unknown",
+	"Ready line off",
+	"Tardy",
+	"Non-existant",
+	"dest. IMP reinitialization",
+	"Scheduled PM",
+	"Scheduled Hardware",
+	"Scheduled Software",
+	"Emergency Restart",
+	"Power Outage",
+	"Software Breakpoint",
+	"Hardware Failure",
+	"Not scheduled up",
+	"Unknown",
+	"Unknown",
+	"Coming up"
+};
+char *days[]
+{
+	"Monday",
+	"Tuesday",
+	"Wednesday",
+	"Thursday",
+	"Friday",
+	"Saturday",
+	"Sunday",
+	"Monday"
+};
+
+/* name:
+	main
+
+function:
+	to get all of the data from kernel memory, and cause it
+	to be formatted
+
+algorithm:
+
+parameters:
+	-k	use /usr/sys/core instead of /dev/kmem
+	-c	tell about connections
+	-l	show last sent and received leaders
+	-r	print out any hosts with outstanding rfnms
+	-s	status of all sockets
+	-h	which hosts are known to be alive
+	-n      show what netstat system call returns
+	name	status of host with that name
+
+returns:
+
+globals:
+	r_contab
+	w_contab
+	corefd
+	coreref
+	leader
+
+calls:
+	open	(sys)
+	read	(sys)
+	close	(sys)
+	printf
+	find_symbol
+	seek_to
+	pr_con
+
+history:
+
+ */
+main(argc, argv)
+ int argc;
+ char **argv;
+{	register int i;
+	register int addr;
+	register char *s;
+	int cflag;
+	int lflag;
+	int rflag;
+	int sflag;
+	int hflag;
+	int impstatus;
+
+	cflag = 0;
+	lflag = 0;
+	rflag = 0;
+	sflag = 0;
+	hflag = 0;
+
+	for(i = 1; i < argc; i++)
+	{	if (argv[i][0] != '-')
+		then	host_status(argv[i]);
+		else	for(s = argv[i] + 1; *s; s++)
+		switch (*s)
+		{	case 'k':
+				coreref = "sysdump";
+				break;
+                        case 'o':
+                                octal++;
+			case 'c':
+				cflag++;
+				break;
+			case 'f':
+				printflags();
+				break;
+			case 'l':
+				lflag++;
+				break;
+			case 'r':
+				rflag++;
+				break;
+			case 's':
+				sflag++;
+				break;
+			case 'h':
+				hflag++;
+				break;
+			case 'n':
+				donetstat();
+				break;
+			default:
+				printoptions();
+				break;
+		};
+
+	}
+	if (argc == 1)
+		cflag++;	/* Print connections by default */
+	corefd = open(coreref,0);
+	if (corefd < 0) then
+	{	printf("Unable to access %s\n", coreref);
+		exit(-1);
+	}
+
+  /*    seek_to(0164004);
+	read(corefd, &impstatus, 2);
+	if (impstatus > 0) then
+		printf("IMP thinks we're up\n");
+	else
+	{	printf("IMP thinks we're down\n");
+		exit(-1);
+	}
+  */
+	if (lflag) then
+	{	i = find_symbol("_imp");
+		seek_to(i+2);
+		read(corefd, &leader, sizeof leader);
+		printf("\nin: ");
+		pr_ldr(&leader);
+		i = find_symbol("_oimp");
+		seek_to(i);
+		read(corefd, &leader, sizeof leader);
+		printf("out: ");
+		pr_ldr(&leader);
+	}
+
+	if (cflag) then
+	{
+		addr = find_symbol("_r_contab");
+		seek_to(addr);
+		read(corefd, &r_contab, sizeof r_contab);
+	
+		addr = find_symbol("_w_contab");
+		seek_to(addr);
+		read(corefd, &w_contab, sizeof w_contab);
+	
+		printf(
+"D   hostname  lnk  l-skt    f-skt     flags   p-id user-id bs m-all b-all b-q'd\n");
+		printf(
+"- ----------- --- ------ ----------- -------- ---- ------- -- ----- ----- -----\n");
+		for(i = 0; i < CONSIZE; i++) pr_con(&r_contab[i], 'R');
+		for(i = 0; i < CONSIZE; i++) pr_con(&w_contab[i], 'W');
+	}
+
+	if (rflag) then
+	{	addr = find_symbol("_host_map");
+		seek_to(addr);
+		read(corefd, rfnm_map, sizeof rfnm_map);
+		pr_rfnm( rfnm_map );
+	}
+
+	if (hflag) then host_status(0);
+
+	close(corefd);
+	exit();
+}
+/* name:
+	pr_con
+
+function:
+	to print out a connection table entry
+
+algorithm:
+	if entry is not in use, ignore it;
+	print out the direction, host# and link#;
+          print out the local and foreign socket #s;
+	read in the associated socket structure;
+	call pr_skt on it;
+
+parameters:
+contab	pointer to a connection table entry;
+	char	direction of link (R or W)
+
+returns:
+	true	if the entry was in use
+	false	otherwise
+
+globals:
+	socket
+	hostname
+
+calls:
+	seek_to
+	read	(sys)
+	printf
+
+called by:
+	main
+
+history:
+
+*/
+pr_con( contabp , dir )
+ struct conentry *contabp;
+ char dir;
+{       register struct conentry *ctp;
+	long i;
+	register int j;
+        char *locv();
+        char *locvo();
+	char *hname;
+
+	ctp = contabp;
+	i = ctp -> c_host;
+	j = ctp -> c_link;
+	if (( i == 0 && j == 0 ) || ctp -> c_siptr == 0) then return(false);
+
+	hname = hostname(i);
+	if (*hname == '?') hname = puthost(i, 0);
+	printf(octal? "%c %-11.11s %3o ":"%c %-11.11s %3d ", dir, hname, j & 0177);
+        printf(octal? "%6o %11s ":"%6d %11s ", ctp->c_localskt,
+               octal? locvo(ctp->c_fskt[0], ctp->c_fskt[1])
+                    : locv(ctp->c_fskt[0], ctp->c_fskt[1])
+               );
+	seek_to(ctp->c_siptr);
+	read(corefd, &socket, sizeof socket);
+	pr_skt(&socket, dir);
+	return(true);
+}
+/* name:
+	pr_skt
+
+function:
+	to format the information in a socket structure
+
+algorithm:
+	use a read or write structure pointer as is appropriate;
+	print out the bytesize, pid, flags and message allocation;
+	if a read socket:
+		print out the bytes allocation and number of queued bytes;
+	else
+		print out the bytes allocation;
+
+parameters:
+	pointer to a socket structure
+	a direction	('R' for read, 'W' for write)
+
+returns:
+
+globals:
+
+calls:
+	printf
+
+called by:
+	pr_con
+
+history:
+
+ */
+/* FLAG TABLE */
+
+struct flgstruc
+{
+   int flagbit;
+   char flagc;
+   char *flagmsg;
+}
+    flgstruc[]
+{
+   n_hhchanwt,  'h', "n_hhchanwt -- read socket waiting for link 0",
+   n_rcvwt,     'r', "n_rcvwt -- read socket waiting for input",
+   n_prevmerr,  'x', "n_prevmerr -- transmission error on last send operation",
+   n_sendwt,    'w', "n_sendwt -- write socket waiting for send to complete",
+   n_allwt,     'a', "n_allwt -- write socket waiting for allocation",
+   n_xmterr,    'X', "n_xmterr -- incomplete transmission occurred, proc not yet awakened",
+   n_open,      'o', "n_open -- socket is open and usable",
+   n_toncp,     'i', "n_toncp -- all communication over this socket goes to ncp",
+   n_usriu,     'u', "n_usriu -- user still using this socket",
+   n_ncpiu,     'n', "n_ncpiu -- ncp still using this socket",
+   n_eof,       'c', "n_eof -- socket has been closed",
+   n_rfnmwt,    'R', "n_rfnmwt -- RFNM received, proc not yet awakened",
+   n_allocwt,   'A', "n_allocwt -- ALL received, proc not yet awakened",
+   0, ' ', ""
+};
+
+pr_skt(sptr,dir)
+ struct rdskt *sptr;
+ char dir;
+{	register struct rdskt *sp;
+	register int i;
+	register int j;
+	int flags;
+        struct flgstruc *fsp;
+	char flagstr[16];
+	char *flagp;
+	struct	{
+		char	*qlink;
+		char p_stat;
+		char	p_flag;
+		char	p_pri;
+		char	p_sig;
+		char	p_uid;
+		char	p_time;
+		char	p_cpu;
+		char	p_nice;
+		int	p_pgrp;
+		int	p_pid;
+		int	p_ppid;
+		int	p_addr;
+		int	p_size;
+		int	p_wchan;
+		int	*p_textp;
+		int	p_clktim;
+		} proc;
+	char linebuf[120];
+
+
+	sp = sptr;
+
+        if (sp->r_flags & n_usriu) then
+	{	seek_to(sp->r_rdproc);
+		read(corefd, &proc, sizeof proc);
+
+                if (getpw(proc.p_uid, linebuf))
+                     {
+                     linebuf[0] = '?';
+                     linebuf[1] = '?';
+                     linebuf[2] = '\0';
+                     }
+                else
+                  {
+                  for(i = 0; i < 7; i++)
+                      	if (linebuf[i] == ':') then break;
+                  linebuf[i] = '\000';
+                  }
+	}
+	else
+	{	linebuf[0] = '\000';
+		proc.p_pid = 0;
+	}
+
+	flags = sp->r_flags & n_flgfld;
+        flagp = flagstr;
+        for (fsp = &flgstruc[0]; fsp->flagbit; fsp++)
+                if (flags & fsp->flagbit)
+                        *flagp++ = fsp->flagc;
+        *flagp = '\0';
+
+        printf("%8s %4d %7s %2d %5d ", flagstr, proc.p_pid,
+		linebuf, sp->r_bsize, sp->r_msgs);
+
+	if (dir == 'R') then
+		printf("%5d %5d\n", sp->r_bytes&077777, sp->r_qtotal&077777);
+	else
+	{	i = (sp->w_falloc[1] >> 3) & 017777;
+		j = (sp->w_falloc[0] << 13) & 0060000;
+		printf("%5d\n", (i | j));
+	}
+
+	return(true);
+}
+/* name:
+	pr_ldr
+
+function:
+	to format and print an ih or hi leadr
+
+algorithm:
+	print out the type, host, link, subtype, bytesize and count
+
+parameters:
+	pointer to a leader structure
+
+returns:
+
+globals:
+
+calls:
+	printf
+
+called by:
+	main
+
+history:
+
+*/
+pr_ldr( leaderp )
+ struct leader *leaderp;
+{	register struct leader *lp;
+	long host;
+
+	lp = leaderp;
+#ifndef SHORT
+	host = 0;
+	host.h_imp0 = lp -> l_ih.ih_imp0;
+	host.h_imp1 = lp -> l_ih.ih_imp1;    /* swap imp field */
+	host.h_hoi = lp -> l_ih.ih_hoi;      /* use host directly */
+	if (host) host.h_net = localnet;
+#endif
+#ifdef SHORT
+	host = lp -> l_ih.ih_host & 0377;
+	host = stolhost(host);
+#endif
+	printf("host %s, link %d, type %d(%d), size %d(%d)\n",
+		hostname(host), lp->l_ih.ih_link&0377, lp->l_ih.ih_type,
+		lp->l_ih.ih_sbty, lp->l_hh.hh_bycnt, lp->l_hh.hh_bysz);
+#ifndef SHORT
+	printf("nff %d, net %d, flgs %o, htype %d\n",
+		lp -> l_ih.ih_nff, lp -> l_ih.ih_net,
+		lp -> l_ih.ih_flgs, lp -> l_ih.ih_htype);
+#endif
+}
+/* name:
+	pr_rfnm
+
+function:
+	to find which hosts have outstanding rfnms
+
+algorithm:
+	Do for each word in rfnm table
+		Do for each bit in that word
+			If bit is on, print the hostnumber
+
+parameters:
+	pointer to a rfnm table
+
+returns:
+	true
+
+globals:
+
+calls:
+	printf
+
+called by:
+	main
+
+history:
+
+*/
+pr_rfnm( rptr )
+ int *rptr;
+{	register int numout;
+	register int word;
+	register int bit;
+	long host;
+
+	printf("Hosts with outstanding rfnms:\n");
+	numout = 0;
+	for(word = 0; word < LIMPS; word++)
+		for(bit = 0; bit < LHOI; bit++)
+			if (  (rptr[word] >> bit) & 01 ) then
+			{	if (numout) then printf(", ");
+				host.h_hoi = bit;
+				host.h_imp = word;
+				host.h_net = localnet;
+				printf("%10s", hostname(host));
+				if (numout > 6) then
+				{	printf("\n");
+					numout = 0;
+				}
+			}
+}
+/* name:
+	find_symbol
+
+function:
+	to find the address (in /unix) of a specified symbol
+
+algorithm:
+	put the symbol into an argument block;
+	call nlist;
+	if the symbol was found, return its value, else
+		print an error message and exit
+
+parameters:
+	*char	pointer to the null terminated symbol name
+
+returns:
+	only if symbol was found
+	int
+
+globals:
+
+calls:
+	nlist
+	printf
+	exit
+
+called by:
+	main
+
+history:
+
+*/
+find_symbol( symbolp )
+ char *symbolp;
+{	register char *p;
+	register int i;
+	static struct {
+		char name[8];
+		int  vtype;
+		int  value;
+		} nl[2];
+
+
+	p = symbolp;
+	for(i = 0; i < 8; i++)
+		if (nl[0].name[i] = *p) then p++;
+
+	nl[0].vtype = 0;
+	nl[1].name[0] = '\000';
+
+	nlist("/unix", nl);
+	if (nl[0].vtype == 0) then
+	{	printf("Unable to locate %s in /unix\n", symbolp);
+		exit(-1);
+	}
+	else
+		return( nl[0].value );
+}
+/* name:
+	seek_to
+
+function:
+	to do a seek to a specified location on the file on corefd
+
+algorithm:
+	do an absolute seek to half the number;
+	do a relative seek to half the number;
+
+parameters:
+	an address (16-bit) in the file
+
+returns:
+
+globals:
+
+calls:
+	seek	(sys)
+
+called by:
+	mail
+	pr_con
+
+history:
+	written because many addresses in the system look like negative
+	numbers and seek fucks up on them.
+
+*/
+seek_to(addr)
+ int addr;
+{	register int a;
+
+	a = (addr>>1) & 077777;
+	seek(corefd, a, 0);
+	seek(corefd, a, 1);
+}
+/* name:
+	printoptions
+
+function:
+	to print out help information
+
+calls:
+	printf
+
+called by:
+	main
+
+history:
+
+*/
+printoptions()
+{	printf("Netstat -- options\n\n");
+	printf("option     meaning\n");
+	printf("------     -------\n");
+	printf("none        default to -c\n");
+	printf("-c          display the status of all open connections\n");
+        printf("-o          -c with octal socket and link numbers\n");
+	printf("-f	    explain flags of connection list\n");
+	printf("-k          use /usr/sys/core instead of /dev/mem\n");
+	printf("-r          which hosts have oustanding rfnms\n");
+	printf("-l          show the last sent and received leaders\n");
+	printf("-h          which hosts are believed up\n");
+	printf("-n          local host; daemon up?; what's in kernel\n");
+	printf("hostname    display the status of that host\n");
+	printf("\n");
+}
+/* name:
+
+	host_status
+function:
+	to decode the status of a particular host
+
+algorithm:
+
+parameters:
+	0               print all alive hosts
+	host id string  give info on this host
+
+returns:
+
+globals:
+	hstat_tab
+	reasons
+	days
+
+calls:
+	printf
+	gethost, hostname       (libn)
+
+called by:
+	main
+
+history:
+	Stolen from steve holmgren's hstat program by Mark Kampe
+	Fixed to print correct status jsq BBN 3-7-79
+	Printing all living hosts and
+		hstat_tab init moved here from main jsq BBN 3-20-79
+*/
+int hstatfd -1;
+
+host_status( hname )
+ char *hname;
+{
+	register when, why;
+	long entry_num;
+	int hashednum, status;
+	register struct hstat_tab *hs;
+	char *as;
+
+	if (hstatfd < 0) {
+		hstatfd = open(hs_file , 0);
+		if (hstatfd < 0) then
+		{       printf("Unable to open %s\n", hs_file);
+			exit(-1);
+		}
+		read(hstatfd , hstat_tab, sizeof(hstat_tab));
+		close(hstatfd);
+	}
+	if (hstat_tab[0].hs_up != 0) {
+		printf("\nCannot communicate with local IMP.\n");
+		return;
+	}
+	if (hname == 0) {
+		why = 0;
+		printf("\nThe following hosts are up:\n");
+		for(when = 1; when < host_ken - 1; when++)
+			if (hstat_tab[when].hs_up == 0) then
+			{
+				entry_num = hstat_tab[when].hs_host;
+				as = hostname(entry_num);
+				if (*as == '?') as = puthost(entry_num, 0);
+				printf("%12s  " , as);
+				if ( (++why)%5 == 0 ) then printf("\n");
+			}
+		if (why == 0) then
+			printf("\n\n\007Looks pretty bad, doesn't it\n\n");
+		else	printf("\n");
+		return;
+	}
+	entry_num = gethost(hname);
+	if ( entry_num == -1 ) then
+	{       printf("%s is not a known host\n" , hname);
+		return(false);
+	}
+
+	hashednum = host_hash(entry_num);
+	if (hstat_tab[hashednum].hs_host != entry_num) {
+		hashednum = -1;
+		for (hs = &hstat_tab[0]; hs < &hstat_tab[host_ken - 1]; hs++){
+			if (hs -> hs_host == entry_num) {
+				hashednum = hs - &hstat_tab[0];
+				break;
+	}       }       }
+	if (hashednum == -1) {
+		printf("no info on %s\n", hostname(entry_num));
+		return(false);
+	}
+	if( (status = hstat_tab[hashednum].hs_up) == 0 )
+		printf("Host %s is alive\n",hostname( entry_num ));
+	else
+	{
+		why = ((status.hibyte)&017);
+		printf("Host %s is Dead", hostname(entry_num));
+		if (why) printf("; Cause: %s", reasons[why]);
+		when = ((swab (status)) >> 4)& 07777;
+		if (when != 07776) {
+			printf("; Back up: %s %d:%d",
+			days[ when&07 ], (when>>3)&037, (when>>8)&017*5 );
+		}
+		printf("\n");
+	}
+}
+swab(an) {int i; i.hibyte = an.lobyte; i.lobyte = an.hibyte; return(i); }
+/*
+
+module name:
+	printflags
+
+function:
+	prints explanation of the flags in the connection listing
+
+globals contained:
+	none
+
+calls:
+	printf
+
+history:
+	Coded by Dan Franklin 7/14/78
+*/
+
+printflags()
+{
+        struct flgstruc *fsp;
+
+	printf("The flags field corresponds precisely to the flags kept in the NCP.\n");
+	printf("The appearance of a letter means that the corresponding bit is on.\n");
+        for (fsp = &flgstruc[0]; fsp->flagbit; fsp++)
+                printf("%c %s\n", fsp->flagc, fsp->flagmsg);
+	return;
+}
+
+/*
+
+name:   donetstat
+function:
+	to print the results of the netstat system call
+algorithm: call it and print it
+parameters: none
+returns: nothing
+globals:daemon, compflags
+called by: main
+calls: netstat
+history: intial coding jsq bbn 2-9-79
+*/
+char *daemon[] { "rawdaemon up", "daemon down", "ncpdaemon up" };
+char *compflags[] { "NETWORK", "SHORT", "NCP", "RMI", "GATEWAY", "MSG" };
+
+donetstat() {
+	register i;
+
+	if (netstat(&netparam) == -1){
+		perror("netparam");
+		return;
+	}
+	printf("%s  ", puthost(netparam.net_lhost, 0));
+	printf("%s\n", puthost(netparam.net_lhost, 4));
+	printf("%s\n", daemon[(ncpopnstate) + 1]);
+	for (i = 0; i < sizeof(compflags)/sizeof(compflags[0]); i++) {
+		printf("%s\t%s\n", compflags[i],
+			((1 << i) & netparam.net_flags) ?
+				"yes" : "no");
+	}
+}

@@ -1,0 +1,1584 @@
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Performance Improvements in UNIX Pipes and Ports
+
+
+
+
+
+
+
+
+
+
+November 1978
+
+
+Morris Kranc
+
+
+
+
+
+
+Prepared for:
+Defense Advanced Research Projects Agency
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                        TABLE OF CONTENTS
+
+
+
+
+
+
+1.   INTRODUCTION .............................................  1
+
+
+
+2.   PERFORMANCE OF PIPES ....................................  4
+
+
+
+3.   IMPROVEMENTS TO PORTS ................................... 10
+
+
+
+4.   PERFORMANCE ON THE PDP-11/70 ............................ 15
+
+
+
+5.   REAL-WORLD PERFORMANCE WVALUATION ....................... 19
+
+
+
+6.   REFERENCES .............................................. 22
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+1. INTRODUCTION
+
+
+
+     This report discusses improvements made to the pipe and port
+
+routines as implemented in the UNIX operating  system  [1].   All
+
+tests, unless otherwise noted, were conducted on a PDP-11/40 with
+
+dual RK05 disks and 128K of memory.
+
+
+
+     An  understanding  of  UNIX I/O is essential to this discus-
+
+sion.  Before describing specific improvements, we will therefore
+
+examine general I/O strategies of the standard UNIX system.
+
+
+
+     When a user process `writes' some data,  the  system  copies
+
+that  data  to  a buffer taken from the buffer freepool.  At this
+
+point, the system can proceed in one of three ways:
+
+
+
+
+
+(1) It can perform a synchronous write. _  __ ___ _______ _ ___________ _____
+
+
+A routine is initiated which writes the contents  of  the  buffer
+
+onto  the  disk.   The  operating system initiates this write and
+
+waits until its conclusion before freeing the buffer and  return-
+
+ing control to the user.
+
+
+
+
+
+
+
+
+
+
+
+
+                              - 1 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+(2) It can perform an asynchronous write. _  __ ___ _______ __ ____________ _____
+
+
+The  routine to write the contents of the buffer onto the disk is
+
+initiated, but the operating system does not wait for its conclu-
+
+sion.   Rather,  control is returned to the user process.  Later,
+
+when the write is finished, an interrupt is  generated,  and  the
+
+system  regains  control  in  order  to  return the buffer to the
+
+freepool.
+
+
+
+
+
+(3) It can perform a delayed write. _  __ ___ _______ _ _______ _____
+
+
+Nothing is actually written to the device.  Rather, the buffer is
+
+returned  to  the  freepool  with  a  special  delayed write flag
+
+(B_DELWRI) turned on.  Additionally, the buffer contains a  (dev-
+
+ice  number,block  number) pair that identifies its ultimate disk
+
+location.  This buffer will eventually reach  the  front  of  the
+
+freepool  queue and will be requested for some other purpose.  At
+
+this point, before the buffer is actually given away, the  buffer
+
+allocation  routine  will  initiate  a write to the disk.  At the
+
+conclusion of the write, the buffer will be allocated to its  new
+
+purpose.   Thus,  between the time it enters the freepool and the
+
+time it reaches the front of the freepool, a delayed write buffer
+
+represents  the  only  up-to-date  copy of the disk block (device
+
+number,block number).
+
+
+
+     The purpose of a delayed write is as follows.  Both the read
+
+
+
+                              - 2 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+and write routines are smart enough to  check  the  freepool  for
+
+delayed  write  copies of a particular block before they actually
+
+initiate any disk I/O.  Let us suppose that a user is writing ten
+
+times  into the same disk block.  If each write is done asynchro-
+
+nously, this will require 10 disk reads and 10 disk writes.   If,
+
+however,  a delayed write is performed each time, all updates can
+
+probably be done within the buffer, and only one  disk  write  is
+
+required.
+
+
+
+     The operating system  uses  the  following  rule  to  choose
+
+between  a  delayed write and an asynchronous write: if the final
+
+character of a block has been changed, i.e. the  block  is  full,
+
+then  it  is  assumed that no further updates will occur for that
+
+block, and it is written  asynchronously.   Otherwise,  there  is
+
+still  hope that later updates will occur, and a delayed write is
+
+effected.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              - 3 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+2. PERFORMANCE OF PIPES
+
+
+
+     A program named t.pipe1.c was written to exercise UNIX  pipe
+
+I/O  [2].  t.pipe1.c forks off into a parent and a child process.
+
+The parent writes a variable number of variable-sized blocks into
+
+the  pipe (maximum blocksize = 4096).  The child reads the amount
+
+of data the parent was supposed to write.  The UNIX  `time'  com-
+
+mand  was  used  to  ascertain  the real time and the system time
+
+required for each run.  Additionally, the `CPU usage' was  calcu-
+
+lated.   By  this  we  mean  the percentage of real time taken by
+
+actual CPU activity, as opposed to idle time, I/O waits, etc.   A
+
+high `CPU usage' value will mean the system is running efficient-
+
+ly and is always finding things to do.  Running on  an  otherwise
+
+unoccupied system, the following results were obtained:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              - 4 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+SIZE OF BLOCK                EXECUTION TIME             CPU USAGE
+
+                       real time    system time
+
+
+
+
+2                       10              8.0                 80%
+
+4                       9               7.4                 80%
+
+8                       9               7.5                 82%
+
+16                      9               7.7                 82%
+
+32                      10              8.1                 81%
+
+64                      12              9.5                 78%
+
+128                     15              10.2                66%
+
+256                     32              11.0                34%
+
+512                     1:02            15.2                24%
+
+1024                    2:03            26.4                22%
+
+2048                    4:06            49.1                19%
+
+4096                    8:08            1:34                19%
+
+
+
+                        TABLE 1  One Thousand Blocks
+
+
+
+
+
+
+
+     Note  that, for suitably large block size, execution time is
+
+almost linear.  Note also that at the maximum block size of  4096
+
+bytes,  throughput  is  about 65 Kbps.  Of the over 8 minutes re-
+
+quired for this operation, only 1:34 is actually consumed in sys-
+
+tem time - the rest is non-specific system overhead.  What is the
+
+system doing during the other 6 minutes?
+
+
+                              - 5 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+     To  visualize the problem, let us construct an `ideal' algo-
+
+rithm for pipe reads and writes.  We would  like  to  avoid  disk
+
+activity  as  much as possible.  The writer, then, should be per-
+
+forming all its writes as delayed writes.  The  information  will
+
+thus  reside  in  a freepool buffer rather than on a disk.  If we
+
+are lucky, the reader will activate before  that  buffer  reaches
+
+the  front  of  the  freepool queue and is actually written.  The
+
+reader can then snatch the  information  from  the  buffer,  thus
+
+avoiding an entire disk write disk read cycle.
+
+
+
+     Recall now the actual algorithm  that  the  system  uses  in
+
+determining  whether  to  perform  a  delayed  or an asynchronous
+
+write.  In the case of blocksize = 4096, it performs  four  asyn-
+
+chronous  writes,  of 512 bytes each, since the last character of
+
+each 512-byte block has been changed.  The reader, when  activat-
+
+ed,  must  then perform four disk reads.  Clearly, different cri-
+
+teria are in order for pipe files.  Since a reader and  a  writer
+
+are  active  simultaneously,  it  will  always make sense for the
+
+writer to perform delayed writes, in the  hope  that  the  reader
+
+will  activate  in  time  to get the buffer before it is actually
+
+written.
+
+
+
+     To implement this, the following changes were made:
+
+
+
+
+(1) The standard write routine checks if the file it  is  dealing
+
+with  is  a  pipe  file, and, if it is, always performs a delayed
+
+
+                              - 6 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+write.
+
+
+
+
+(2)  The  pipe  reader,  after it has read a block of data from a
+
+buffer in the freepool, turns off the delayed write flag  associ-
+
+ated  with that buffer.  Thus, the block will never be written to
+
+disk.  We no longer care whether the disk file is up to date,  as
+
+long as the reader has received the data.
+
+
+
+
+(3) The `getbuffer' routine avoids the buffers with delayed write
+
+flags  on  for as long as possible, preferring to retrieve `unat-
+
+tached' buffers if it can.  The hope is that by giving a  delayed
+
+write  buffer  a  slightly  longer  life in core, we increase the
+
+chance that some reader will activate in time to use it.
+
+
+
+     With these changes, the following statistics were obtained:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              - 7 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                   STANDARD SYSTEM                 IMPROVED SYSTEM
+
+
+BLOCK SIZE      EXECUTION TIME   CPU            EXECUTION TIME   CPU
+                                USAGE                           USAGE
+
+               real    system                   real   system
+
+
+
+
+2               10      8.0       80%           9       7.5       80%
+
+4               9       7.4       80%           9       7.7       81%
+
+8               9       7.5       82%           10      8.1       81%
+
+16              9       7.7       82%           10      8.3       83%
+
+32              10      8.1       81%           10      8.7       87%
+
+64              12      9.5       78%           11      9.0       81%
+
+128             15      10.2      68%           15      10.0      66%
+
+256             32      11.0      34%           26      12.2      46%
+
+512             1:02    15.2      24%           45      16.0      35%
+
+1024            2:03    26.4      22%           49      26.3      53%
+
+2048            4:06    49.1      19%           1:23    46.9      56%
+
+4096            8:08    1:34      19%           1:31    1:25.2    93%
+
+
+
+        TABLE 2 (standard system statistics reproduced from TABLE 1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              - 8 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+     For  blocksizes  of 16 and smaller, performance is identical
+
+to that of the standard system.  For blocksizes  between  32  and
+
+512,  real  time  is equivalent, although system time is slightly
+
+higher for the improved system.  For large blocks (1024 bytes and
+
+up)  the  savings in real time become dramatic, while system time
+
+drops only slightly.  At blocksize = 4096, the throughput is  360
+
+Kbps, representing an improvement by more than a factor of 5 over
+
+the standard system.  Note also that CPU usage is over 90% -  the
+
+system  is  almost always finding useful tnings to do rather than
+
+blocking on disk I/O.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              - 9 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+3. IMPROVEMENTS TO PORTS
+
+
+
+     Ports [3] are similar in conception to pipes, and they share
+
+a  significant  amount  of  code.   Again, we have a reader and a
+
+writer interacting, and we should expect improvements similar  to
+
+those seen in pipes.
+
+
+
+     A program called t.port1.c was written to exercise port  I/O
+
+[2].   Again,  results  were obtained via the 'time' command on a
+
+PDP-11/40 with dual RK05 disks.  The `before' and `after' statis-
+
+tics appear below.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 10 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                STANDARD SYSTEM                 IMPROVED SYSTEM
+
+
+BLOCK SIZE    EXECUTION TIME   CPU            EXECUTION TIME    CPU
+                              USAGE                            USAGE
+
+
+           real  user  system               real  user  system
+
+
+
+
+2         16      .8    13.7    87%         17      .9     15.2   94%
+
+4         16      .7    13. 9   92%         17      .9     15.4   95%
+
+8         16      .7    14.1    93%         17      .9     15.5   95%
+
+16        18     1.3    14.9    83%         19     1.3     16.4   94%
+
+32        18     1.7    14.6    88%         20     1.5     17.2   94%
+
+64        20     2.9    15.2    90%         22     2.8     18.2   95%
+
+128       24     4.8    17.0    90%         26     4.5     19.5   95%
+
+256       42     9.0    19.5    69%         32     8.8     21.5   93%
+
+512      1:27   17.2    25.9    49%         47    17.1     27.9   95%
+
+1024     2:49   34.3    38.1    42%        1:15   33.8     40.0   98%
+
+2048     5:26 1:07.0  1:03.4    39%        2:14  1:06.6   1:04.6  98%
+
+4096    10:28 2:13.5  1:53.2    39%        4:09  2:12.7   1:51.9  98%
+
+
+
+
+                        TABLE 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 11 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+     For   smaller  blocksizes,  the  improved  system  performed
+
+slightly worse than the standard one.  For blocksize > 128,  how-
+
+ever, the improvement is noticeable both in system and real time.
+
+At the maximum blocksize of 4096, the  improved  system  performs
+
+more than twice as well as the standard system.
+
+
+
+     Why are the times so much worse for ports than for pipes  on
+
+the new system? For one thing, t.port1.c does much more extensive
+
+checking than t.pipe1.c.  At 4096 bytes/block, over 2 minutes are
+
+consumed  in  this  checking.   Also,  t.port1.c writes an 8-byte
+
+header before it writes each block.  Thus, for small  blocksizes,
+
+time  consumed  writing the header is comparable to that consumed
+
+in writing the block itself.
+
+
+
+     For  the  purpose  of  comparison, t.port1.c was modified so
+
+that it did no checking and wrote no headers.  The results appear
+
+below.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 12 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                     PIPE I/O                        PORT I/O
+
+
+
+
+BLOCK SIZE   EXECUTION TIME    CPU          EXECUTION TIME    CPU
+                              USAGE                          USAGE
+
+             real    system                   real    system
+
+
+
+
+
+2             9       7.5       80%           9       7.8      87%
+
+4             9       7.7       81%          10       8.1      81%
+
+8             9       8.1       81%          11       8.9      81%
+
+16           10       8.3       83%          11       9.0      81%
+
+32           10       8.7       87%          12       9.5      80%
+
+64           11       9.0       81%          12      10.1      83%
+
+128          15      10.0       66%          12      11.0      91%
+
+256          26      12.2       46%          28      12.5      83%
+
+512          45      16.0       35%          48      18.4      90%
+
+1024         49      26.3       53%          53      30.1      93%
+
+2048       1:23      46.9       56%        1:30      52.3      57%
+
+4096       1:31     1:25.2      93%        1:40    1:36.4      96%
+
+
+
+                        TABLE 4
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 13 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+     As  can  be  seen,  port I/O involves slightly more overhead
+
+than pipe I/O.  At 4096  bytes/block,  throughput  is  about  325
+
+Kbps, still a pretty reasonable rate.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 14 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+4. PERFORMANCE ON THE PDP-11/70
+
+
+
+
+
+
+
+     For the sake of comparison, t.pipe1.c and t.port1.c were run
+
+on an otherwise unoccupied PDP-11/70 system with dual RP06 disks.
+
+The results for pipes and ports appear below.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 15 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                        PIPE PERFORMANCE
+
+
+
+
+
+                     STANDARD SYSTEM                IMPROVED SYSTEM
+
+BLOCK SIZE      EXECUTION TIME    CPU           EXECUTION TIME    CPU
+                                 USAGE                           USAGE
+
+                real   system                   real    system
+
+
+
+
+2               3       3.0       100%          5       3.7        74%
+
+4               5       3.6        72%          4       3.8        95%
+
+8               4       3.2        80%          6       4.4        73%
+
+16              4       3.3        82%          5       4.2        84%
+
+32              5       4.0        80%          4       4.0       100%
+
+64              5       4.1        82%          5       4.3        86%
+
+128             6       5.0        83%          6       5.4        90%
+
+256             7       5.4        77%          6       5.5        91%
+
+512             15      6.6        44%          8       6.6        82%
+
+1024            30      11.6       38%          11      10.6       96%
+
+2048          1:00      20.4       34%          20      18.3       91%
+
+4096          1:58      38.1       32%          36      34.6       96%
+
+
+
+                        TABLE 5
+
+
+
+
+
+
+
+
+
+
+
+                             - 16 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                        PORT PERFORMANCE
+
+
+
+                STANDARD SYSTEM                 IMPROVED SYSTEM
+
+
+
+
+BLOCK SIZE      EXECUTION TIME    CPU           EXECUTION TIME    CPU
+                                 USAGE                           USAGE
+
+             real  user  system               real  user  system
+
+
+
+
+2            7       .3    6.4     95%         9     .6     7.2    86%
+
+4            7       .5    6.5    100%         8     .5     7.4    98%
+
+8            7       .8    6.1     98%         8     .6     7.4   100%
+
+16           8       .5    6.5     87%         9     .8     7.2    88%
+
+32           8       .6    6.8     92%        10     .6     7.9    85%
+
+64           9      1.0    6.9     87%        10     1.1    8.2    93%
+
+128         10      1.5    7.9     94%        11     1.4    9.1    95%
+
+256         12      2.9    8.9     98%        13     2.2   10.1    94%
+
+512         20      5.3   11.7     85%        17     5.2   11.8   100%
+
+1024        35      9.7   17.4     77%        27     9.9   16.2    96%
+
+2048      1:08     19.0   27.7     68%        46    19.0   26.1    98%
+
+4096      2:25     36.5   47.9     13%      1:23    38.1   43.9    98%
+
+
+
+                        TABLE 6
+
+
+
+
+
+
+
+
+
+
+                             - 17 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+The improvements observed on the PDP 11/70 reflect those seen  on
+
+the  11/40.   At  4096  bytes/block,  throughput for pipes is 910
+
+Kbps, an improvement of a factor of 4 over the standard system.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 18 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+5. REAL-WORLD PERFORMANCE EVALUATION
+
+
+
+     All the statistics presented above were obtained on an  oth-
+
+erwise inactive system.  If other processes were sharing the sys-
+
+tem, this would clearly degrade performance.  The improved system
+
+depends  very  heavily  on  being able to keep a `working set' of
+
+buffers in core.  If other processes are competing  for  buffers,
+
+we  would  expect  disk  activity  for a port or pipe file to in-
+
+crease.
+
+
+
+     To  measure this increase, the following test was conducted.
+
+Two processes were run in  background,  each  of  which  executed
+
+t.pipe1.c.   Additionally, a third process was run which copied a
+
+file continuously (thus guaranteeing continuous  disk  activity).
+
+The  test  was  run twice.  In the first experiment, the two pipe
+
+routines each transferred 1000 blocks  of  128  bytes  each.  The
+
+times  for these two routines were then recorded. Results for two
+
+such runs were:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 19 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                STANDARD SYSTEM                 IMPROVED SYSTEM
+
+
+                EXECUTION TIME                  EXECUTION TIME
+
+                real    system                  real    system
+
+
+
+
+RUN 1___ _
+
+
+
+PROCESS 1:      2:05     9.3                    1:40     11.4
+
+PROCESS 2:      2:07     9.3                    1:40     11.5
+
+
+
+
+RUN 2___ _
+
+
+
+PROCESS 1:      2:15     9.4                    1:46    11.2
+
+PROCESS 2:      2:24     9.2                    1.46    11.6
+
+
+
+                        TABLE 7
+
+
+
+
+
+
+At  this  small  blocksize, the improved system shows a small but
+
+noticeable improvement in real time.  System time,  however,  has
+
+gone  up  -  the  extra checking required to prevent unnescessary
+
+disk activity has its cost.
+
+
+
+In  the second experiment, the two pipe routines each transferred
+
+100 blocks of 4096 bytes each.  The times for two such runs was:
+
+
+
+                             - 20 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+                STANDARD SYSTEM         IMPROVED SYSTEM
+
+
+                EXECUTION TIME          EXECUTION TIME
+
+                real     system         real      system
+
+
+
+
+RUN 1___ _
+
+
+
+PROCESS 1:      1:36    9.6             29      9.5
+
+PROCESS 2:      1:47    10.3            46      9.8
+
+
+
+
+RUN 2___ _
+
+
+
+PROCESS 1:      1:52    10.0            37      10.1
+
+PROCESS 2:      1:53    9.8             39      9.5
+
+
+
+                        TABLE 8
+
+
+
+
+
+
+The improvement is now much more noticeable - the improved system
+
+is more than three times as fast as the standard version.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 21 -
+
+
+
+
+
+
+
+Report No. 3970                      Bolt Beranek and Newman Inc.
+
+
+
+6. REFERENCES
+
+
+
+
+
+[1]  J.F. Haverty and R.D. Rettburg, "Interprocess Communications
+
+     for a Server in UNIX",  Proceedings of Compcon 78:  Com-
+
+     puter Communications Networks, September 1978, pp. 312-315.
+
+
+
+
+
+[2]  G. Fostel, "A Note on UNIX 11/40 Communication Rates", BBN
+
+     Departmental Memo,  July, 1978.
+
+
+
+
+
+[3]  "Interprocess Communication Extensions for the UNIX Operating
+
+     System: II. Implementation", Rand  Corporation Report  No.
+
+     R-2064/2-PR, Rand Corporation, Santa Monica, CA, 22, April
+
+     1977.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             - 22 -
+
+
+

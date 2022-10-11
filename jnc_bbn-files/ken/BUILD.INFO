@@ -1,0 +1,285 @@
+default: ../conf/ldken
+rm -f now
+date>now
+
+rmobjects
+now
+rm -f *.o
+rm -f rmobjects
+date>rmobjects
+
+../conf/ldken
+alloc.o           awaitr.o          clock.o           fio.o     \
+iget.o            main.o            malloc.o          map_page.o \
+nami.o            pipe.o            prf.o             proc_util.o \
+rdwri.o           set_lcba.o        sig.o             slp.o        \
+subr.o            sys1.o            sys2.o            sys3.o        \
+sys4.o            sysent.o          text.o            trap.o    table.o
+ld -x -r \
+	alloc.o		awaitr.o	clock.o		fio.o\
+	iget.o          main.o          malloc.o\
+	nami.o          pipe.o          prf.o\
+	rdwri.o         sig.o           slp.o\
+	subr.o          sys1.o          sys2.o\
+	sys3.o          sys4.o          sysent.o\
+	proc_util.o     text.o          trap.o  \
+	map_page.o      set_lcba.o      table.o
+mv a.out ../conf/ldken
+
+alloc.o
+alloc.c \
+../h/param.h\
+../h/systm.h\
+../h/filsys.h\
+../h/conf.h\
+../h/buf.h\
+../h/inode.h\
+../h/user.h
+ncc -c -O alloc.c
+
+awaitr.o
+awaitr.c \
+../h/param.h\
+../h/netparam.h\
+../h/conf.h\
+../h/proc.h\
+../h/user.h\
+../h/inode.h\
+../h/file.h\
+../h/reg.h\
+../h/net.h
+ncc -c -O awaitr.c
+
+clock.o
+clock.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/proc.h\
+../h/text.h
+ncc -c -O clock.c
+
+fio.o
+fio.c \
+../h/param.h\
+../h/user.h\
+../h/filsys.h\
+../h/file.h\
+../h/conf.h\
+../h/inode.h\
+../h/reg.h
+ncc -c -O fio.c
+
+iget.o
+iget.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/inode.h\
+../h/filsys.h\
+../h/conf.h\
+../h/buf.h
+ncc -c -O iget.c
+
+main.o
+main.c \
+../h/param.h\
+../h/user.h\
+../h/systm.h\
+../h/proc.h\
+../h/text.h\
+../h/inode.h\
+../h/seg.h
+ncc -c -O main.c
+
+malloc.o
+malloc.c \
+../h/param.h
+ncc -c -O malloc.c
+
+map_page.o
+map_page.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/reg.h\
+../h/file.h\
+../h/inode.h\
+../h/seg.h
+ncc -c -O map_page.c
+
+nami.o
+nami.c \
+../h/param.h\
+../h/inode.h\
+../h/user.h\
+../h/systm.h\
+../h/buf.h
+ncc -c -O nami.c
+
+pipe.o
+pipe.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/inode.h\
+../h/file.h\
+../h/reg.h
+ncc -c -O pipe.c
+
+prf.o
+prf.c \
+../h/param.h\
+../h/seg.h\
+../h/buf.h\
+../h/conf.h
+ncc -c -O prf.c
+
+proc_util.o
+proc_util.c \
+../h/param.h\
+../h/proc.h\
+../h/user.h
+ncc -c -O proc_util.c
+
+rdwri.o
+rdwri.c \
+../h/param.h\
+../h/inode.h\
+../h/user.h\
+../h/buf.h\
+../h/conf.h\
+../h/systm.h
+ncc -c -O rdwri.c
+
+set_lcba.o
+set_lcba.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/proc.h\
+../h/reg.h\
+../h/file.h\
+../h/inode.h
+ncc -c -O set_lcba.c
+
+sig.o
+sig.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/proc.h\
+../h/inode.h\
+../h/reg.h
+ncc -c -O sig.c
+
+slp.o
+slp.c \
+../h/param.h\
+../h/user.h\
+../h/proc.h\
+../h/text.h\
+../h/systm.h\
+../h/file.h\
+../h/inode.h\
+../h/buf.h
+ncc -c -O slp.c
+
+subr.o
+subr.c \
+../h/param.h\
+../h/conf.h\
+../h/inode.h\
+../h/user.h\
+../h/buf.h\
+../h/systm.h
+ncc -c -O subr.c
+
+sys1.o
+sys1.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/proc.h\
+../h/buf.h\
+../h/reg.h\
+../h/inode.h\
+../h/file.h
+ncc -c -O sys1.c
+
+sys2.o
+sys2.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/reg.h\
+../h/file.h\
+../h/inode.h\
+../h/conf.h
+ncc -c -O sys2.c
+
+sys3.o
+sys3.c \
+../h/param.h\
+../h/systm.h\
+../h/reg.h\
+../h/buf.h\
+../h/filsys.h\
+../h/user.h\
+../h/inode.h\
+../h/file.h\
+../h/conf.h
+ncc -c -O sys3.c
+
+sys4.o
+sys4.c \
+../h/param.h\
+../h/user.h\
+../h/reg.h\
+../h/inode.h\
+../h/systm.h\
+../h/proc.h\
+../h/file.h
+ncc -c -O sys4.c
+
+sysent.o
+sysent.c \
+../h/param.h
+ncc -c -O sysent.c
+
+text.o
+text.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/proc.h\
+../h/text.h\
+../h/inode.h
+ncc -c -O text.c
+
+trap.o
+trap.c \
+../h/param.h\
+../h/systm.h\
+../h/user.h\
+../h/proc.h\
+../h/reg.h\
+../h/seg.h
+ncc -c -O trap.c
+
+table.o
+table.c \
+../h/param.h \
+../h/netparam.h \
+../h/systm.h \
+../h/user.h \
+../h/proc.h \
+../h/buf.h \
+../h/reg.h \
+../h/inode.h \
+../h/file.h \
+../h/text.h \
+../h/contab.h \
+../h/rawnet.h
+ncc -c -O table.c
+

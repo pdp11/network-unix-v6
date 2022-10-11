@@ -1,0 +1,85 @@
+cc  -O -c pcmp.c
+cc  -O -c safter.c
+"safter.c", line 17: warning: old-fashioned assignment operator
+cc  -O -c sall.c
+cc  -O -c salloc.c
+cc  -O -c sappend.c
+cc  -O -c sauto.c
+cc  -O -c sbcopy.c
+cc  -O -c sbefor.c
+cc  -O -c sbegin.c
+"sbegin.c", line 13: warning: illegal pointer combination
+cc  -O -c sbfind.c
+cc  -O -c sbskip.c
+cc  -O -c scat.c
+cc  -O -c scatn.c
+cc  -O -c scmp.c
+cc  -O -c scopy.c
+cc  -O -c scopyn.c
+cc  -O -c send.c
+cc  -O -c seq.c
+cc  -O -c seqcas.c
+cc  -O -c serror.c
+cc  -O -c sfind.c
+cc  -O -c sindex.c
+cc  -O -c sinit.c
+cc  -O -c slen.c
+cc  -O -c smatch.c
+cc  -O -c smove.c
+cc  -O -c srev.c
+cc  -O -c ssearc.c
+cc  -O -c sskip.c
+cc  -O -c sslash.c
+cc  -O -c stokeq.c
+cc  -O -c string.c
+cc  -O -c strunc.c
+cc  -O -c substr.c
+cc  -O -c sunslash.c
+cc  -O -c sverif.c
+cc  -O -c vcmp.c
+cc  -O -c veq.c
+cc  -O -c veqcas.c
+cc  -O -c vmove.c
+rm -f libstr.a
+ar rv libstr.a `lorder pcmp.o safter.o sall.o salloc.o sappend.o sauto.o sbcopy.o sbefor.o sbegin.o sbfind.o sbskip.o scat.o scatn.o scmp.o scopy.o scopyn.o send.o seq.o seqcas.o serror.o sfind.o sindex.o sinit.o slen.o smatch.o smove.o srev.o ssearc.o sskip.o sslash.o stokeq.o string.o strunc.o substr.o sunslash.o sverif.o vcmp.o veq.o veqcas.o vmove.o | tsort`
+ar: Creating libstr.a.
+a - pcmp.o
+a - safter.o
+a - salloc.o
+a - sappend.o
+a - sbcopy.o
+a - sbefor.o
+a - sbegin.o
+a - sbfind.o
+a - sbskip.o
+a - scat.o
+a - scatn.o
+a - scmp.o
+a - scopyn.o
+a - scopy.o
+a - send.o
+a - seq.o
+a - seqcas.o
+a - sfind.o
+a - sindex.o
+a - sinit.o
+a - smatch.o
+a - smove.o
+a - srev.o
+a - sauto.o
+a - ssearc.o
+a - sskip.o
+a - sslash.o
+a - stokeq.o
+a - string.o
+a - strunc.o
+a - substr.o
+a - sunslash.o
+a - sall.o
+a - serror.o
+a - slen.o
+a - sverif.o
+a - vcmp.o
+a - veq.o
+a - veqcas.o
+a - vmove.o

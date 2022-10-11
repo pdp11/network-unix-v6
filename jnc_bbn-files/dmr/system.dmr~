@@ -1,0 +1,16 @@
+rm  ../conf/libdmr
+
+echo "archiving dmr"
+ar r ../conf/libdmr\
+  kl.o              bio.o             mem.o\
+  partab.o          rk.o              tty.o             pty.o\
+  ports.o       imp11.o
+
+
+chdir ../conf
+echo Loading
+ld -x l.o m40.o c.o ldken libdmr
+syms -ug a.out
+mv a.out ../unix
+echo 'Done - output is ../unix'
+

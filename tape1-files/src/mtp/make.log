@@ -1,0 +1,11 @@
+cc -O -DTCP -c  srvrmtp.c
+cc -O -DTCP -c  die.c
+cc -O -DTCP -c  spawn.c
+cc srvrmtp.o die.o spawn.o -lnet
+Output file named: srvrmtp
+cc -O -DTCP -c  mtpsrv.c
+cc mtpsrv.o spawn.o -lnet
+Output file named: mtpsrv
+cc -O -DTCP -c  mailer.c
+cc mailer.o -lnet
+Output file named: mailer

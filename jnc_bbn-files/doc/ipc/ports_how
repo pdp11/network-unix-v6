@@ -1,0 +1,29 @@
+
+
+1. Define a new flag bit FPORT in file.h with some previously unused
+bit value.
+
+2. In closef() in fio.c, change
+        if(rfp->f_count <= 1)
+                closei(rfp->f_inode, rfp->f_flag&FWRITE);
+to
+        if(rfp->f_count <= 1) {
+                /* Next 3 lines are Rand addition for ports - jsz, 3/76 */
+                if (rfp->f_flag&FPORT)
+                        portclose(rfp);
+                else
+                        closei(rfp->f_inode, rfp->f_flag&FWRITE);
+        }
+
+3. In seek() in sys2.c, change the check for FPIPE to (FPIPE|FPORT).
+
+4. In cdevsw[] in c.c, add an entry like
+/* 18*/ &portopen, &nodev,    &portread, &portwrite,&portstty,  /* ports */
+
+5. In sysent[] in sysent.c, add an entry like
+        2, &port,                       /* 59 = port (rand:jsz) */
+
+6. Include the ports driver, which I am sending as a separate message.
+
+7. Put port.s, which I am sending as a separate message, in the library.
+

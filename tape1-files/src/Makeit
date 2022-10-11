@@ -1,0 +1,8 @@
+LIB=../../lib
+BIN=../../bin
+ETC=../../etc
+for i in libbbn libnet libstr host ftp mtp telnet util
+do
+	echo Making $i:
+	(cd $i; make all.install L=$LIB B=$BIN E=$ETC)
+done

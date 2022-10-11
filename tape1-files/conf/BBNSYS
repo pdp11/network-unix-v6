@@ -1,0 +1,27 @@
+#
+# Configuration file for BBN VAX  (rfg:bbn 04/30/81)
+#
+cpu		"VAX780"
+options		BBNNET,NOBADSECT
+ident		BBNSYS
+timezone	5 dst
+maxusers	48
+
+config	hphp	vmunix
+
+controller	mba0	at nexus ?
+controller      mba1    at nexus ?
+controller	uba0	at nexus ?
+disk		hp0	at mba? drive 0
+disk            hp1     at mba? drive 1
+master          ht0     at mba? drive ?
+tape            tu0     at ht0 slave 0
+pseudo-device	pty
+pseudo-device   bbnnet
+pseudo-device	bk
+device	 	dh0	at uba0 csr 0160020 flags 0xffff vector dhrint dhxint
+device		dz0	at uba0 csr 0160100 flags 0xff	vector dzrint dzxint
+device          dz1     at uba0 csr 0160110 flags 0xff  vector dzrint dzxint
+device          dz2     at uba0 csr 0160120 flags 0xff  vector dzrint dzxint
+device          acc0    at uba0 csr 0167600             vector acc_iint acc_oint
+device		acc1	at uba0 csr 0167700		vector acc_iint acc_oint

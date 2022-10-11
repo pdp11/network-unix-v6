@@ -1,0 +1,43 @@
+!		Bootstrap Help File - BOOT.HLP
+!
+!	This file describes the 4BSD UNIX bootstrap procedures.  
+!	
+!	In a normal reboot, the system checks the disks and comes up 
+!	mult-user without intervention at the console.  Such a reboot can be 
+!	stopped (after it prints the date) with a ^C (interrupt).  This
+!	will leave the system in single-user mode with only the
+!	console terminal active.
+!
+!	If booting from the console is necessary, the command
+!
+!		BOOT
+!
+!	will boot from the default device.  On an 11/780 the default
+!	device is determined by a 'DEPOSIT' command stored on the
+!	floppy in the file 'DEFBOO.CMD'.
+!
+!	There are other boot files on the floppy that allow booting
+!	the system from other devices in multi- or single-user mode:
+!
+!	Command		Runs File	Action
+!	----------------------------------------------------------------
+!	BOOT 		DEFBOO.CMD	Boots multi-user from default device.
+!	BOOT HPS	HPSBOO.CMD	Boots single-user from RP06, RP07,
+!						RM03, RM05, RM80
+!	BOOT HPM	HPMBOO.CMD	Boots multi-user from RP06, RP07,
+!						RM03, RM05, RM80
+!	BOOT HKS	HKSBOO.CMD	Boots single-user from RK07
+!	BOOT HKM	HKMBOO.CMD	Boots multi-user from RK07
+!	BOOT UPS	UPSBOO.CMD	Boots single-user from SMD-type disks
+!	BOOT UPM	UPMBOO.CMD	Boots multi-user from SMD-type disks
+!	BOOT ANY	ANYBOO.CMD	Interactive single-user boot (prompts
+!						for boot device)
+!
+!	The choice of device and boot action is determined by parameters
+!	loaded into general registers R10 and R11 at boot time, by the
+!	boot command files.  The inputs to the BOOT program are:
+!
+!	R10  -  Device to boot from (0=HP, 2=UP, 3=HK)
+!	R11  -  Action on boot (0=multi-user, 1=auto-reboot, 2=single-user,
+!				3=prompt for device, single-user)
+!

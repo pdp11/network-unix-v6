@@ -1,0 +1,6 @@
+echo ftp: 
+lint -DTCP ftp.c die.c ftp_lib.c tcp_fns.c tcp_usr.c
+echo ftpsrv: 
+lint -DTCP ftpsrv.c die.c tcp_fns.c tcp_srv.c spawn.c
+echo srvrftp: 
+lint -DTCP srvrftp.c die.c tcp_fns.c tcp_srv.c ftp_lib.c

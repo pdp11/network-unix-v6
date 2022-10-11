@@ -1,0 +1,6 @@
+cc -I. -c -S -DBBNSYS -DVAX780 -DNOBADSECT -DBBNNET -DKERNEL -DVMUNIX ../dev/conf.c
+/lib/c2 conf.s | sed -f ../sys/asm.sed | as -o conf.o
+rm -f conf.s
+loading vmunix
+rearranging symbols
+116584+24492+14016 = 155092b = 0x25dd4b

@@ -1,0 +1,132 @@
+.TH NETSTAT 1
+.SH NAME
+.IX "\*inetstat\*r command"
+.IX "network debugging"
+netstat \- report network status
+.SH SYNOPSIS
+.B netstat
+[
+.B \-asmh
+] [
+.B \-f
+sysname ] [
+.B \-d
+dumpname ]
+.SH DESCRIPTION
+.I Netstat
+reports status of open network connections, and optionally, various other
+statistics about network operation.  With no options, netstat returns a line of
+status for each open connection.  The
+.B -s
+option causes statistics about network operation to be returned.  The 
+.B -m
+option results in statistics about network buffer management.  The
+.B -a
+option causes all three reports to be printed.  The
+.B -h
+option causes network addresses to be printed at a 32-bit hexadecimal value, 
+rather than the ASCII host name deriver from the host tables.
+Normally, the files
+.I /vmunix
+and
+.I /dev/kmem
+are used as the source of the network data.  However, these may be overridden
+for debugging purposes with the
+.B -f
+and
+.B -d
+options, where
+.I sysname
+is the name of a file containing a valid system namelist, and
+.I dumpname
+is the name of a file containing a system crash dump.
+.PP
+For each open connection, netstat reports the following:
+.IP USER 10
+user name of connection owner
+.IP PID 10
+process ID of connection owner
+.IP MODE 10
+connection mode flags:  
+.RS 10
+.IP T 5
+TCP connection
+.IP I 5
+IP connection
+.IP R 5
+raw local net connection
+.IP C 5
+control connection
+.IP L 5
+connection opened in listen mode
+.IP P 5
+push mode set
+.IP U 5
+urgent mode set
+.IP D 5
+connection opened for debugging (see
+.IP 
+.I trpt(5)).
+.IP A 5
+send raw packets asis
+.IP V 5
+verify raw packet checksums
+.IP S 5
+compose raw packet headers
+.IP E 5
+return ICMP or local protocol error packets to raw connections
+.RE
+.IP STAT 10
+connection status as defined in 
+.I /usr/include/sys/con.h
+.IP HOST 10
+foreign host address.  For -h option, this is a 32-bit hex representation of 
+the internet address.  Otherwise, it is the ASCII translation of the
+address, as determined by the host tables.  If the address is not found in
+the host tables, a decimal representation of the bytes of the address is
+printed.  If the address is zero, the string "anyhost" is printed.
+.IP FPRT 10
+(TCP connections only) foreign port
+.IP LPRT 10
+(TCP only) local port
+.IP TCB 10
+(TCP only) TCB address
+.IP SB 10
+number of buffers in use on send queue
+.IP RB 10
+number of buffers in use on receive queue
+.IP SA 10
+maximum number of buffers that can be on send queue
+.IP RA 10
+maximum number of buffers that can be on receive queue
+.IP HI 10
+(IP and RAW connections only) high link or protocol number of range to be
+received by this connection
+.IP LO 10
+(IP and RAW only) low link or protocol number of range to be received by this
+connection
+.IP TS 10
+(TCP only) state of TCP finite state machine as defined in
+.I /usr/include/net/fsm.h.
+.PP
+The network statistics returned with the -s or -a options include the number of
+times the network has been reset since the last reboot,  the number of times
+local net messages have been flushed due to buffer limits or errors, the number
+of local net messages that have been dropped because no connection exists to
+accept them, the number of messages dropped due to insufficient buffers, the
+number of messages dropped due to bad checksums in the internet header and the
+TCP header,  the number of messages rejected by the TCP because they correspond
+to no currently open TCP connection, and the number of messages the TCP has
+saved for later processing due to buffer limits.
+.PP
+The buffer statistics returned with the -m or -a options include the number of
+pages stolen from the system by the network, the number of buffers currently
+allocated (8 128 byte buffers/page), the number of buffers free for use, and
+the high and low watermarks set by the network for buffer allocation.
+.SH FILES
+/vmunix, /dev/kmem
+.SH SEE ALSO
+trpt(1)
+.SH BUGS
+When using the -d option to examine a system crash dump, the FPRT, LPRT, and TS
+fields should be ignored.

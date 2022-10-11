@@ -1,0 +1,53 @@
+410,411c410
+* impawt(type,iip,fd)
+* char type;
+---
+. impenb(iip,fd)
+413,414d411
+* int fd;
+* 
+424,441c421,425
+* 
+* 	switch(type)  {
+* 
+* 		case  'e':
+* 
+* 			     if (!(i->impflag&open)) u.u_error = EIO;
+* 				 else { itp = ablei(type,0,ip,fd) ;
+* 					if (dir) i->impitw = itp ;
+* 					  else i->impitr = itp;
+* 				      }
+* 			     break;
+* 
+* 		case  'd':
+* 			     ablei(type,0,ip,fd) ;
+* 			     if (dir) i->impitw = 0 ;
+* 				 else i->impitr = 0 ;
+* 			     break;
+* 		}
+---
+. 	if (!(i->impflag&open)) u.u_error = EIO;
+. 	else { itp = enablei(0,ip,fd) ;
+.                if (dir) i->impitw = itp ;
+.                else i->impitr = itp;
+.               }
+444c428,444
+* 
+---
+. 
+. impdis(iip,fd)
+. struct inode *iip;
+. {
+. 	register struct imptab *i;
+. 	register struct inode *ip;
+.         int dir, itp;
+. 
+. 	ip = iip;
+.         dir = ip->i_addr[0].d_minor;
+. 	i = &imp[(dir&0376)>>1];
+.         dir = dir&01 ;
+.         disablei(0,ip,fd) ;
+.         if (dir) i->impitw = 0 ;
+.         else i->impitr = 0 ;
+.  
+. }

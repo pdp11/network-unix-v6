@@ -1,0 +1,18 @@
+hp      0176700 254     5       2 drives
+ht      0172440 224     5       2 drives
+dz      0160100 300,304 5,5     8 20ma lines
+kw11l   0177546 100     6       line frequency clock
+kw11p   0172540 104     6       programmable clock
+imp11a  0172410 124     5       imp interface xmit
+imp11a  0172430 274     5       imp interface rcv
+kl      0177560 60,64   4       console typewriter
+dh11ad  0160020 310,314 5       16 line EIA DMA interface
+dm11	0170500	320	4	Modem control for Dh11
+gn0	0167750	154	5	Genisco graphics processor
+gn1	0167710	160	5	Genisco graphics processor
+gn2	0167730	150	5	Genisco graphics processor
+fp11c
+rootdev hps00
+swapdev hps10,hps08
+swplo   7614
+nswap   2000

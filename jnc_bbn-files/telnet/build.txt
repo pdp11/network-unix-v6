@@ -1,0 +1,110 @@
+default: telnet 
+
+thp
+configure use_tcp load
+first: set t = thp; set p = tcp
+mv result thp
+: cp thp /usr/bin/thp
+
+tcp_telnet
+configure use_tcp load
+first: set t = telnet; set p = tcp
+mv result tcp_telnet
+: cp tcp_telnet /usr/bin/tcp_telnet
+
+telnet
+configure use_ncp load
+first: set t = telnet; set p = ncp
+mv result telnet
+: cp telnet /usr/bin/telnet
+
+
+configure F	 ;: set up headers
+(alwaysbuild)
+if ! { cmp -s protocol.h $t.h }    cp $t.h protocol.h
+if ! { cmp -s llpro.h	 $pdef.h } cp $pdef.h llpro.h
+
+use_tcp F
+tcpfns.o
+cp tcpfns.o netfns.o
+
+use_ncp F
+ncpfns.o
+cp ncpfns.o netfns.o
+
+load F
+main.o netcmd.o netfns.o cmds.o globals.o netlib.a
+: Loading...
+ncc -i -o result main.o netcmd.o netfns.o cmds.o globals.o netlib.a -ln
+
+
+main.o
+main.c cbuf.h protocol.h /sys/sys/h/sgttybuf.h netconn.h
+ncc -O -c main.c
+
+netcmd.o
+netcmd.c globdefs.h protocol.h cbuf.h netconn.h /sys/sys/h/sgttybuf.h
+ncc -O -c netcmd.c
+
+ncpfns.o    ;: becomes netfns.o
+ncpfns.c ncp.h cbuf.h netconn.h
+ncc -O -c ncpfns.c
+
+tcpfns.o    ;: becomes netfns.o
+tcpfns.c globdefs.h tcp.h cbuf.h netconn.h
+ncc -O -c tcpfns.c
+
+cmds.o
+cmds.c protocol.h llpro.h cbuf.h netconn.h
+ncc -O -c cmds.c
+
+globals.o
+globals.c
+ncc -O -c globals.c
+
+netlib.a
+netlib.a!cbuf.o \
+netlib.a!fatal.o \
+netlib.a!ttyctl.o \
+netlib.a!ioctrl.o \
+netlib.a!tcplib.o \
+netlib.a!tcperr.o \
+netlib.a!log.o \
+netlib.a!putc.o
+
+netlib.a!cbuf.o
+cbuf.c cbuf.h
+ncc -O -c cbuf.c
+
+netlib.a!fatal.o
+fatal.c
+ncc -O -c fatal.c
+
+netlib.a!ttyctl.o
+ttyctl.c globdefs.h /sys/sys/h/sgttybuf.h
+ncc -O -c ttyctl.c
+
+netlib.a!ioctrl.o
+ioctrl.c
+ncc -O -c ioctrl.c
+
+netlib.a!tcplib.o
+tcplib.c tcpstru.h tcp.h
+ncc -O -c tcplib.c
+
+netlib.a!tcperr.o
+tcperr.c
+ncc -O -c tcperr.c
+
+netlib.a!log.o
+log.c specfmt.h
+ncc -O -c log.c
+
+netlib.a!putc.o
+putc.c
+ncc -O -c putc.c
+
+nettty
+nettty.c
+ncc -O nettty.c
+: cp nettty /etc/nettty

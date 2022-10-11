@@ -1,0 +1,9 @@
+% rm -f now
+%  date>now
+%  ncc -sO rawstat.c -ln -lj
+Output file named rawstat
+%  % rm -f now
+%  date>now
+%  ncc -sO netstat.c -ln -lj
+Output file named netstat
+%  

@@ -1,0 +1,62 @@
+Compiling ken
+alloc.c:
+awaitr.c:
+clock.c:
+fio.c:
+iget.c:
+main.c:
+malloc.c:
+map_page.c:
+nami.c:
+pipe.c:
+ports.c:
+prf.c:
+proc_util.c:
+rdwri.c:
+set_lcba.c:
+sig.c:
+slp.c:
+subr.c:
+sys1.c:
+sys2.c:
+sys3.c:
+sys4.c:
+sysent.c:
+table.c:
+text.c:
+trap.c:
+Loading ken
+compiling dmr
+rm: No such file or directory. libdmr
+bio.c:
+mem.c:
+kl.c:
+partab.c:
+rk.c:
+tty.c:
+pty.c:
+archiving dmr
+compiling ncpkernel
+btest.c:
+contab.c:
+imp11a.c:
+impio.c:
+kerbuf.c:
+ncpio.c:
+nopcls.c:
+nrdwr.c:
+rawmain.c:
+rawmisc.c:
+rawtable.c:
+loading
+Loading
+
+
+
+File a.out
+Non-sharable
+  Text: 38552   Data: 1920    Bss: 7730     (decimal bytes)
+  Text: 113230  Data: 3600    Bss: 17062    (octal bytes)
+
+38552+1920+7730=48202 (136112)
+Done - output is ../unix

@@ -1,0 +1,51 @@
+rm ldken libdmr
+cd ../ken
+echo "Loading ken"
+ld -x -r \
+	alloc.o		awaitr.o	clock.o		fio.o\
+	iget.o          main.o          malloc.o\
+	nami.o          pipe.o          prf.o\
+	rdwri.o         sig.o           slp.o\
+	subr.o          sys1.o          sys2.o\
+	sys3.o          sys4.o          sysent.o\
+	proc_util.o     text.o          trap.o          table.o
+
+mv a.out ../conf/ldken
+
+chdir ../conf
+as m40.s
+mv a.out m40.o
+as l.s
+mv a.out l.o
+ncc -c c.c
+
+
+echo "archiving dmr"
+ar r ../conf/libdmr\
+kl.o              bio.o             mem.o\
+  partab.o          rk.o              tty.o             pty.o
+
+echo "compiling ncpkernel"
+cd ../ncpkernel
+echo "loading"
+ld -x -r \
+btest.o \
+contab.o \
+imp11a.o \
+impio.o \
+kerbuf.o \
+ncpio.o \
+nopcls.o \
+nrdwr.o \
+rawmain.o \
+rawmisc.o \
+rawtable.o
+mv a.out ../conf/ldncp
+chdir ../conf
+echo Loading
+bigld -x l.o m40.o c.o ldncp ldken libdmr
+syms -ug a.out
+size a.out
+mv a.out ../unix
+echo 'Done - output is ../unix'
+

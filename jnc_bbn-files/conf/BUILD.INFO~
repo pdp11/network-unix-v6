@@ -1,0 +1,37 @@
+default: testfile
+rm -f now
+date>now
+
+testfile
+l.o m70.o c.o sysfix
+date>testfile
+
+rmobjects
+now
+rm -f a.out libdmr ldken ldncp
+rm -f *.o
+date>rmobjects
+
+sysfix
+sysfix.c
+ncc -s -O sysfix.c
+
+m70.o
+m70.s
+as m70.s
+mv a.out m70.o
+
+l.o
+data.s l.s
+as data.s l.s
+mv a.out l.o
+
+c.o
+c.c \
+../h/param.h
+ncc -c -O c.c
+
+dummynet.o
+dummynet.c
+ncc -c -O dummynet.c
+

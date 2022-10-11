@@ -1,0 +1,13 @@
+467,468c467,475
+* 			p->p_flag =& ~(STRC|SWTED);
+* 			setrun(p);
+---
+. 
+. 			/*
+. 			 * This change is to avoid finding
+. 			 * ptrace'd procs that are already
+. 			 * stopped when doing the wait.
+. 			 * BBN:cdh 1 May 79
+. 			 */
+. 
+. 			f--;	/* Seen stopped proc's don't count */

@@ -1,0 +1,41 @@
+! abbrev  hlp	09/18/81	4
+! boot    hlp	09/18/81	11
+! consol  hlp	09/18/81	11
+! consol  sys	09/18/81	31
+! crash      	09/18/81	1
+! defboo  cmd	09/18/81	2
+! dir        	09/18/81	6
+! <UNUSED>                 	4
+! error   hlp	09/18/81	19
+! eszab   vo0	09/18/81	0
+! filea   pat	09/18/81	7
+! pcs     pat	09/18/81	96
+! remote  hlp	09/18/81	4
+! restar  cmd	09/18/81	2
+! restar  ilv	09/18/81	3
+! wcs123  pat	09/18/81	25
+! wcsmon  hlp	09/18/81	6
+! wcsmon  sys	09/18/81	15
+! wcssrv  bin	09/18/81	10
+! anyboo  cmd	05/21/81	1
+! boot       	05/21/81	20
+! btape      	05/21/81	1
+! cat        	05/21/81	19
+! d2dcpy     	07/23/81	11
+! defboo  hk 	05/21/81	1
+! defboo  hp 	05/21/81	1
+! defboo  up 	05/21/81	1
+! dump       	05/21/81	1
+! hpmboo  cmd	05/21/81	1
+! hpsboo  cmd	05/21/81	1
+! icheck     	05/21/81	25
+! imptst     	07/23/81	11
+! ls         	05/21/81	19
+! mkfs       	05/21/81	27
+! nboot      	07/24/81	20
+! restor     	05/21/81	27
+! upmboo  cmd	05/21/81	1
+! upsboo  cmd	05/21/81	1
+! <UNUSED>                 	48
+! 
+! 33 entries remaining in directory segment 1.

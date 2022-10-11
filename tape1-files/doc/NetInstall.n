@@ -1,0 +1,442 @@
+.po 1i
+.TL
+Installing and Operating the BBN Networking Software
+.sp
+Beta-Test Distribution
+.AU
+Robert F. Gurwitz
+.AI
+Computer Systems Division
+.br
+Bolt Beranek and Newman, Inc.
+.br
+50 Moulton Street
+.br
+Cambridge, Massachusetts 02238
+.AB
+.PP
+This document contains instructions for installing and operating the BBN 
+networking software.  The package includes modifications to the 4.1bsd release of the VAX*
+.FS
+*VAX is a trademark of Digital Equipment Corporation.
+.FE
+UNIX**
+.FS
+**UNIX is a trademark of Bell Laboratories.
+.FE
+operating system, as distributed by the University of California, Berkeley, to 
+support the DoD Standard Transmission Control and Internet Protocols
+(TCP/IP).  In addition, user level commands are included, which implement
+the TELNET Virtual Terminal Protocol, the File Transfer Protocol (FTP), and the Mail Transfer Protocol (MTP), as well as utilities which aid in operating
+the network and debugging programs which use the network.
+.AE
+.bp
+.NH 1
+Introduction
+.PP
+This document explains how to install the BBN network software package,
+which runs under the 4.1bsd release of the Berkeley version of UNIX for the
+VAX.  The distribution consists of two parts: a set of modifications to the
+4.1bsd kernel which supports the lower level network protocols, TCP, IP,
+and the local network interface;  and a suite of user
+level software (commands and libraries), which includes both higher level
+network protocols (TELNET, FTP, and MTP) and utilities for writing and
+debugging programs which use the lower level network protocols.
+.NH 2 
+Prerequisites
+.PP
+It is assumed that the user is already running 4.1bsd on a VAX 11/780 or
+VAX 11/750.  The current release of the system can handle multiple network
+interfaces on one or more nets.  The system has been developed on the
+ARPANET, using the Associated Computer Consultants (ACC) LH/DH-11 IMP
+interface.  A driver for the LH/DH-11 on the UNIBUS is included with the 
+software, and
+the ARPANET 1822 protocol is supported as the local network access
+protocol.  
+Currently, this is the only hardware interface and local network
+protocol supported.  It is expected that software will be
+developed to handle other hardware interfaces and local network protocols
+(such as for the ETHERNET) by sites interested in using this software over
+networks other than the ARPANET.
+.NH 2
+Distribution Format
+.PP
+The software is distributed on a 1600bpi 600' magnetic tape.  The tape
+contains two files.  The first is a tape archive image (see
+.I tar(1))
+of the sources for the 4.1bsd kernel with the network modifications (in the
+standard directory hierarchy /usr/src/sys).  The second file is a tar of a
+directory hierarchy that includes the sources and libraries for the user
+level commands.  This hierarchy is designed to be self-contained, and
+includes src, lib, bin, include, and doc directories.
+.NH 1 
+Installing the Kernel Modifications
+.PP
+There are two paths for integrating the network software into your system.
+The kernel contained on the distribution tape is a complete version of the
+4.1bsd system.  If there are few local modifications to your kernel, you
+may want to use the distributed system as a base for your production system
+and merge local changes into it.  Otherwise, if there are extensive local
+changes to your kernel, you can merge the network additions and
+modifications into your existing kernel sources.  In either case, you will
+want to modify you system configuration files (in /usr/src/sys/conf) to
+include the network.  You should be familiar with the instructions for
+creating system configuration files and making changes to the kernel as
+described in sections 3.2.3-4 of "Installing and Operating 4.1bsd," by Bill
+Joy.
+.NH 2
+Reading the Distribution Tape
+.PP
+For either method of installing the kernel modifications, you should create
+a directory in /usr/src and read in the first file from the tape:
+.sp
+.in 5
+cd /usr/src
+.br
+mkdir netsys
+.br
+cd netsys
+.br
+tar xpb 20
+.in 0
+.sp
+The kernel sources should now be read in.  The network additions (source
+and header files) are contained in the bbnnet subdirectory.  In addition,
+there are modifications to the following files:
+.in 5
+.sp
+fio.c, ioctl.c, locore.s, machdep.c, main.c, param.c, sys2.c, sys3.c in sys
+.sp
+file.h, map.h in h
+.sp
+conf.c in dev
+.sp
+.in 0
+These modifications are
+delimited by:
+.sp
+.in 5
+#ifdef BBNNET
+.br
+...
+.br
+#endif BBNNET
+.in 0
+.sp
+Also, there is a device driver, acc.c, in the dev subdirectory, and its
+header file, accreg.h, in the h subdirectory.  
+.PP
+If you wish to merge the
+network software with your current system, the bbnnet subdirectory must be
+created and copied in your /usr/src/sys, the BBNNET modifications must be
+made to the files in sys and h, and the driver code must be put in dev and h.  
+.PP
+Otherwise, just make your local modifications in the files of
+/usr/src/netsys, and make that your /usr/src/sys hierarchy.
+.NH 2
+Configuring the Network Software
+.PP
+Once the sources have been properly installed in /usr/src/sys, you must
+modify files in the conf subdirectory to include the network additions.
+You can use the files in the distributed conf directory as a guide (i.e.,
+conf/BBNSYS and conf/files).  
+.PP
+You must add the following entries to your system configuration file:
+.sp
+.in 5
+options BBNNET
+.br
+pseudo-device bbnnet
+.br
+pseudo-device pty
+.br
+device acc0 at uba\fIx\fP csr \fIyyy\fP vector acc_iint acc_oint
+.in 0
+.sp
+The 
+.I uba 
+and 
+.I csr 
+fields of the acc device entry should be modified to the
+appropriate values for your system.
+.PP
+You must add the following to the file conf/files:
+.sp
+.in 5
+optional acc.c device-driver
+.br
+optional pty.c 
+.br
+optional bbnnet 
+.I xxx
+.br
+.in 10
+\&...
+.in 0
+.sp
+where the last entries correspond to an entry for each file in the bbnnet
+subdirectory (take these lines from the distribution conf/files file).
+.PP
+Make sure that dev/conf.c has been set up properly for
+the acc device.  Use the distributed dev/conf.c as a guide.
+.PP
+In addition to the files in the conf directory, you must also modify the
+file netconf.c in bbnnet directory to reflect you host's interface(s) to
+the network(s).  The first structure in the file,
+.I 
+struct ifcb,
+.R
+contains one entry for each physical network interface device.  It need
+only be modified if you are attached to a network other than the ARPANET or
+have more than one network interface.  The
+important line in this structure is the second.  On it you must include the
+device number of your interface (ACC's are currently the only interface
+supported:  major device number is ACCDEV), the maximum packet size of the
+network you are interfaced to (1018 for the ARPANET), and its network
+number (ARPANET is net 10).   The second structure in the file,
+.I 
+struct if_localx,
+.R
+contains at least one entry for each physical interface.  It gives the
+network address of the corresponding interface.  The address is in internet
+internal format, and is specified in the ipaddr macro as four decimal
+digits corresponding to the four bytes of the internet address.  (Thus, the
+address of BBN-VAX, host 1/82 on the ARPANET would be specified as:
+.sp
+.in 5
+ipaddr(10,1,0,82).
+.in 0
+.sp
+Note that an interface may have more than one address.  Normally, you
+should just be able to insert your host's address in the macro and leave it
+at that.  (Ultimately, this file will be generated by 
+.I config(8),
+as part of the compile time configuration process.)
+.PP
+You should now be able to compile the kernel with
+.I make(1)
+and produce a running version of vmunix.
+.NH 1
+Installing the User Software
+.PP
+The remaining file on the distribution tape consists of the user level
+commands and libraries that make up the rest of the network software
+package.  This file is also in
+.I tar(1)
+format, and consists of a standalone hierarchy of everything you will
+need to make the commands and libraries.  In addition, you will probably
+have to modify your mail programs to operate with the network mailer and
+mail server.  The necessary modifications are described in the next
+section.
+.PP
+To read the remaining files off the
+tape, make a directory in the appropriate place and read the tape file:
+.sp
+.in 5
+mkdir netuser
+.br
+cd netuser
+.br
+tar xpb 20 [the second file on the distribution tape]
+.in 0
+.sp
+(N.B. All further relative pathnames will start here.)  The file Contents
+contains a description of the various subdirectories.
+.PP
+Note: some programs reference the include files "con.h" and "net.h"
+which are part of the kernel distribution.  You should make sure that
+these files have been installed in /usr/include/sys.
+.PP
+Edit the file include/netfiles.h to your taste, if the
+filenames contained therein are undesirable. 
+.PP
+You are now ready to build executables for the commands and the network
+library.  Change to the src directory and issue the
+.I Makeit
+command.  This will construct libraries in lib and then build the executables
+in bin.
+.PP
+Now install the resulting files in the appropriate places.  If
+the network library is to be made public (so that other programs may
+use it) the file include/netlib.h should be installed in /usr/include,
+and the archive lib/libnet.a should be moved to /lib or /usr/lib.  Likewise
+the executables in bin should be placed in suitable directories:
+.sp
+.in 5
+host, net, netstat, ftp, telnet in /bin or /usr/bin
+.sp
+mkgate, mkhost, prhost, netser, ftpsrv, srvrftp, mtpsrv, srvrmtp, 
+mailer in /etc/net
+.in 0
+.sp 
+In addition, you should install the gateway source table in /etc/net.  This
+file,
+.I gateway.bin,
+is generated from an ASCII source file, 
+.I gateway,
+by the 
+.I mkgate(1)
+command, and is read by the kernel at boot time to initialize the internal
+gateway table.
+.sp
+Before anything useful can be done, the network device should be created
+in /dev/net:
+.sp
+.in 5
+mknod /dev/net/tcp c 255 0
+.in 0
+.sp
+You should edit the MAKE shell script in /dev to include this.
+.PP
+Also, the network information files must be set up correctly.
+(The names of these files are contained in the include file
+.I "include/netfiles.h")
+The file
+.I /etc/THISHOST
+should contain the name of the local host.
+The file
+.I /etc/NETWORKS
+should contain the host address and network number of local system
+(e.g., 5/82,10 -- host 5 on imp 82 on network 10).
+The ASCII version of the host map should be revised slightly
+(see doc/host_map.5.P) to account for the requirement of network
+capabilities.  A sample host map is provided in the directory, etc.
+Finally, the command
+.I mkhost(1),
+must be used to create a binary host name/address map from the ASCII, by
+.sp
+.in 5
+mkhost -o tmpfile
+.br
+prhost -i tmpfile
+.sp
+.in 0
+and inspecting the output of prhost.
+If it is acceptable, running
+.I mkhost
+with no arguments will
+build a binary map in the correct place for
+use by the library and other software.
+.PP
+In order to run the TELNET server (netser), you must configure pseudo-teletype 
+(pty) devices, which allow network users to appear to be logging in on ttys.
+The distributed kernel is configured for 16 ptys.  To change the number of
+possible ptys, modify NPTY in dev/pty.c.  For each pty you plan to use,
+create corresponding special files.  Two special files are required for
+each available pty, created by:
+.sp
+.in 5
+mknod /dev/pty\fIx\fP c 21 \fIy\fP
+.br
+mknod /dev/tty\fIx\fP c 20 \fIy\fP
+.in 0
+.sp
+where
+.I x
+should be a single capital letter, and 
+.I y
+the corresponding origin 0 number (e.g., the first pty would have two
+files, /dev/ptyA and /dev/ttyA, with device numbers (21,0) and (20,0),
+respectively).  You should modify /dev/MAKE to create as many of these
+files as you require.  Both special files are required: /dev/ptyx is the
+actual pty device, and the corresponding /dev/ttyx is a slave that makes
+programs like 
+.I getty 
+and
+.I who
+happy.  You must also include entries in /etc/ttys for each /dev/ttyx, so
+that logins can occur.
+.PP
+You should now be able to run the supplied network commands.  
+Add lines to your /etc/rc file to invoke the TELNET (netser), FTP (ftpsrv),
+and MTP (mtpsrv) servers, and the mail daemon (mailer).  (Be sure to set
+up the mail server and mailer to work with your mail programs, see below.)
+These commands, and their output logfiles, should be run out of /etc/net.
+.NH 2
+Setting up the Mail Software
+.PP
+The mail software uses MTP (the Mail Transfer Protocol) to send and receive
+mail over the network.
+The mail receiver (srvrmtp) gathers up the incoming mail in a file,
+and then invokes a mail sending program to deliver the contents of the file
+to a local user's mailbox.
+Two versions of srvrmtp are provided in this distribution.
+One calls upon the BBN mail program
+.I sndmsg
+(not included in this distribution) to deliver mail locally.
+The other uses the Berkeley
+.I delivermail
+program to perform this task.
+The relevant code is #ifdef'd on "DELIVERMAIL", and the binary versions
+are \fIsrvrmtp\fP and \fIsrvrmtp.d\fP.
+.PP
+If your site uses neither of these programs, you will have to modify the
+routine "sndmsg" in srvrmtp.c to invoke your mail program.
+Your mail program must be able to read a complete message (containing
+an RFC733 header plus text) from a file and deposit it into a mailbox.
+If it is not possible to specify an input file as a command line argument,
+srvrmtp can usually achieve the same effect by closing the standard input
+and opening the file just before executing the mail sending program.
+See the code in "sndmsg" which invokes \fIdelivermail\fP.
+.PP
+Mail going out to the network is queued in the
+directory \fI/usr/spool/netmail\fP.
+A mailer daemon scans this directory every few minutes looking for
+work to do.
+There is one file for each piece of outgoing mail.
+The first line of every file contains information for the use of the mailer,
+and the rest of the file is the message to be sent.
+The format of the information line is as follows:
+.sp
+.in 5
+	host:user:return:
+.in 0
+.sp
+with no blanks.
+\fIHost\fP is the name of the destination host,
+\fIuser\fP is the name of the intended recipient at that host,
+and \fIreturn\fP is the return address for the mail, usually the
+originator of the message.
+You will have to see to it that the program that queues network mail
+on your system places messages in \fI/usr/spool/netmail\fP in this format.
+.PP
+Any questions regarding the mail software should be directed to Eric
+Shienbrood (shienbrood@bbn-unix).
+.NH 1
+Operating the Network Software
+.PP
+The software should need little attention once it is running.  There are
+no procedures for bringing the network up or down.  The software works
+if the network is available, and re-initializes itself when the network
+goes down and comes back up.  The
+.I netstat(1)
+command can be used to determine the status of network connections and
+the condition of the software (number of buffers in use, etc.).  If any
+errant connections are found hanging around, they can be cleared with
+the
+.I netreset(1)
+command (its argument is the TCB address taken from netstat).  The other
+network utilities,
+netdebug, trpt, and tcptest, can all be used to test the network software
+and debug programs written to use the net.
+.NH 1
+Future Modifications
+.PP
+The software package now being distributed is a preliminary test version.
+Work is currently underway at BBN and Berkeley on performance evaluation
+and improvement.  The user interface will be modified to operate with
+whatever IPC mechanisms ultimately adopted by the ARPA Berkeley Steering
+Committee.  In addition, the
+raw IP and local network interfaces will be undergoing substantial
+modification to increase their utility.  The raw interfaces provided in
+this release have not been extensively tested.
+.PP
+In the meantime, I'd appreciate your comments.  Good luck!
+.sp
+.in 40
+Rob Gurwitz
+.br
+gurwitz@bbn-unix
+.br
+617-497-3041	
+.in 0

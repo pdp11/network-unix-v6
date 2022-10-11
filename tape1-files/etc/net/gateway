@@ -1,0 +1,19 @@
+;
+; This is the gateway file. See mkgate(1)
+;
+
+arpanet -> edn via edn-unix
+arpanet -> bbn-rcc via bbn-ig flags 1
+arpanet -> bbn-rcc via bbn-ptip
+arpanet -> bbn-rcc via bbn-rsm
+arpanet -> bbn-rcc via bbn-tenexa
+arpanet -> satnet via bbn-gateway
+arpanet -> satnet via ndre-gateway
+arpanet -> sf-pr-1 via sri-r2d2
+arpanet -> sf-pr-2 via sri-c3po
+arpanet -> bragg-pr via bragg-pkt
+arpanet -> dcn-comsat via comsat-mtr flags 1
+arpanet -> uclnet via bbn-gateway   
+arpanet -> lcs via mit-gw
+arpanet -> lcs via mit-devmultics
+arpanet -> nosc-lccn via bbn-ptip

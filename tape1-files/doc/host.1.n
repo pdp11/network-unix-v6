@@ -1,0 +1,96 @@
+.TH HOST 1
+.SH NAME
+host \*- show host or network numbers and names.
+.IX "\*ihost\*r command"
+.IX "\*inet\*r command"
+.IX "\*imkhost\*r command"
+.IX "\*iprhost\*r command"
+.IX "host number"
+.IX "network number"
+.IX "host name"
+.IX "network name"
+.SH SYNOPSIS
+.nf
+\*bhost\*r [\*ihostname|address[,netname|number]\*r  ...]
+\*bnet\*r [\*inetname|number\*r ...]
+.sp
+\*b/etc/net/mkhost\*r [\*b\*-i\*r \*iifile\*r] [\*b\*-o\*r \*iofile\*r]
+\*b/etc/net/prhost\*r [\*b\*-[an]\*r] [\*b\*-i\*r \*iifile\*r]
+.fi
+.SH DESCRIPTION
+These commands are used for interrogating and maintaining the host map,
+which contains the names and numbers of hosts and networks.
+.IX network
+.IX host
+.PP
+The
+.I host
+command accepts standard network addresses (using either symbolic names
+or numeric addresses) of the form
+.nf
+	hostname|address[,netname|number]
+.fi
+For each, it prints a line containing the host and network names,
+the host address and network number
+and any aliases (nicknames) associated with that host.
+If no argument is given,
+.I host
+uses the name of the local host as found in the file
+\*i/etc/THISHOST\*r.
+Addresses are expected to be in the standard BBN hoi/imp
+notation.
+.PP
+The
+.I net
+command is similar to
+.I host
+but accepts only network names or numbers as arguments.
+If no arguments are given, the number of the first local network
+(as defined by \*i/etc/NETWORKS\*r) is used.
+.I Net
+displays the official name of the network, its number
+and any aliases (nicknames) associated with it.
+.PP
+.I Mkhost
+uses an ascii file (see hostmap(5))
+to generate a binary file used by the functions
+described in libnet(3).
+Options are provided to override the default input file
+(\*i/etc/net/hostmap\*r) and the default output file
+(\*i/etc/net/hostmap.bin\*r).
+.I Mkhost
+is moderately verbose; it writes a number of messages
+to the standard output describing its processing.
+.PP
+.I Prhost
+may be used to regenerate an ascii version of the binary map.
+The network entries are given first, ordered by network number.
+Then host entries are displayed, ordered by network, host name
+and address.
+Two flags allow the ordering to be by network, address and name (\*b\*-a\*r)
+or by name, network and address (\*b\*-n\*r).
+The \*b\*-i\*r flag may be used to override the default input file
+(\*i/etc/net/hostmap.bin\*r).
+The output of
+.I prhost
+is suitable as input to
+.I mkhost.
+.SH DIAGNOSTICS
+.I Host
+and
+.I net
+complain if their arguments cannot be found
+or are syntactically incorrect.
+.I Mkhost
+generates a variety of diagnostics giving the line number of the input
+and a description of the error.
+.SH "SEE ALSO"
+libnet(3), hostmap(5)
+.SH FILES
+.nf
+/etc/THISHOST		local host name
+/etc/NETWORKS		local host addresses
+/etc/net/hostmap	ascii host map
+/etc/net/hostmap.bin	binary version of map
+/etc/net/hostmap.bin~	backup of binary
+.fi

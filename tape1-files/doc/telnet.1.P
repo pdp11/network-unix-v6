@@ -1,0 +1,260 @@
+
+
+
+TELNET(1)           UNIX Programmer's Manual            TELNET(1)
+
+
+
+____NAME
+     telnet - communicate using TELNET protocol
+
+________SYNOPSIS
+     ______     telnet [ open-arguments ]
+
+___________DESCRIPTION
+         ______     The telnet command is used to communicate with another  host
+     using  the  TELNET  protocol.   If  it  is  invoked  with no
+     arguments, it enters command mode, indicated by  its  prompt
+     (an  asterisk).   In  this mode, it accepts and executes the
+     ______     telnet  commands  listed  below.   If  it  is  invoked  with
+                                   ____     arguments,  it  performs  an  open  command (see below) with
+                             ______ ________     those arguments.  Thus, telnet hostname opens  a  connection
+        ________     to hostname.
+
+                                        ______     Once a connection has been opened, telnet enters input mode.
+                                     ______     In  this  mode,  text  typed to telnet is sent to the remote
+                     ______     host.  To issue telnet commands when in input mode,  precede
+                    ______ ______ _________     them  with the telnet escape character (initially '^').  All
+                   ______ ______ _________     text from the telnet escape character to the end of the line
+                           ______     is  taken  to  be  a  telnet  command.   Neither  the escape
+     character nor the command is sent to the foreign  host.   To
+     send the escape character, type two of them in succession.
+
+     When in input mode, the normal terminal editing  conventions
+     may  not  be  available,  rendering  it  difficult  to  type
+                  ______     complicated  telnet  commands.   If  you  type   an   escape
+                                        ______     character  at  the  end of a line, telnet will enter command
+     mode for one line.
+
+     The following commands are available.  Only enough  of  each
+     command to uniquely identify it need be typed.
+
+     ____     help, ?  Briefly explain each command.
+
+     _______     verbose  Announce  all  changes  in  the   status   of   the
+              connection.
+
+     _____     brief    Announce only important changes in  the  status  of
+              the connection (default).
+
+     ____     quit     Close the connection and return to command level.
+
+     __     ip       Send  an  Interrupt-Process  command.   This   will
+              generally  interrupt  - that is, halt - the current
+              command or process on the foreign host.
+
+     __     ao       Send an Abort-Output command.  If the foreign  host
+              implements  it, Abort-Output will cause output from
+              the foreign host to  be  aborted,  but  permit  the
+
+
+
+Printed 8/3/81                                                  1
+
+
+
+
+
+
+TELNET(1)           UNIX Programmer's Manual            TELNET(1)
+
+
+
+              current   command   or   process   to  continue  to
+              completion.
+
+     _____     synch    Send a TELNET Synch.
+
+     _____     break    Send a Break command.  This command is intended  to
+              simulate  pressing  the  BREAK  key  on  a terminal
+              attached to the foreign host.
+
+     __     ec       Send  an  Erase-Character  command.   This  command
+              erases the last character sent to the foreign host,
+              just  as  the  foreign  host's   indigenous   erase
+              character would.
+
+     __     el       Send an Erase-Line command.   This  command  erases
+              the entire last line sent to the foreign host, just
+              as  the  foreign   host's   indigenous   erase-line
+              character would.
+
+     __     ga       Send a Go-Ahead command.  This  command  is  useful
+              only   in   special  circumstances,  such  as  when
+              communicating with another terminal which  requires
+              an explicit command to unlock its keyboard.
+
+     ___     ayt      Send an Are-You-There command.  If the foreign host
+              is  still  up and reading the user's characters, it
+              will respond in some visible or audible way.   Note
+              that  a  response  to  this command only guarantees
+              that the server on the foreign host is up; it  does
+              not  necessarily  imply anything about the state of
+              the user's process or job.
+
+     ____     stty     Set or display the terminal modes.  The  syntax  is
+                                            ____              identical to that of the UNIX stty (1) command.  If
+              the command is issued with no  arguments,  it  will
+              merely  print  out the current terminal modes, just
+                   ____              like stty.
+
+     ______     modtty   Set or display the extended terminal  modes.   This
+                                                   ______              command  merely  invokes  the system modtty command
+              (if it exists).
+
+     _     x        Invoke the Shell and pass it the rest of  the  line
+              for  execution.   While  the  Shell is invoked, the
+              modes of the terminal are changed to those  in  use
+                   ______              when telnet was invoked.  If there are no arguments
+                 _              to x, the shell will read from the  standard  input
+              until an EOT (CNTRL-D) is typed instead.
+
+     ____     open [ host-id ] [ option ] . . .
+
+
+
+
+Printed 8/3/81                                                  2
+
+
+
+
+
+
+TELNET(1)           UNIX Programmer's Manual            TELNET(1)
+
+
+
+     _______     connect [ host-id ] [ option ] . . .
+              Open a network connection to  the  specified  host.
+                  _______              The options are as follows:
+
+      __     -fs #    Use  the  specified  foreign  socket  number.   The
+              default is socket 23.
+
+      _     -t #     Set timeout.  If the connection  attempt  does  not
+              complete  in  the  specified  number of seconds, it
+              will be aborted.
+
+      __     -ls #    Use the specified local socket number.  The default
+                                         ______              is  unspecified,  unless  -server  is specified, in
+              which case it is socket 23 decimal.
+
+      ______     -direct
+
+      ____     -init
+
+      ________     -specific
+
+      ______     -server
+
+      ______     -duplex
+
+      ________     -relative
+              These options set the corresponding  flags  in  the
+              call   upon   the   NCP.   Their  use  is  somewhat
+              specialized and will not be  described  here.   See
+              NCP (4).
+
+      __ ____     -fd fdes This option sets the file descriptor  used  by  the
+                               ________              NCP  when  the  -relative option is specified.  Its
+              use is somewhat specialized.  See NCP (4).
+
+                                                ______                After the command  is  issued,  telnet  will  say
+                "Trying.  .  .".   When  the  connection  becomes
+                             ______                established, telnet will say "Open".
+
+     _____     close    Close the  current  network  connection  (if  any).
+              ______              Telnet  will  wait  until its internal buffers have
+              been emptied before closing the connection.
+
+      ______     (Telnet also implements the "suppress-go-ahead"  option,  by
+     accepting it and taking no action.)
+
+     ___ ______     set escape c
+                                          _              Set the escape character to c.
+
+     ___ ______ ___     set escape off
+              Turn  off  the  escape  character.   This   command
+
+
+
+Printed 8/3/81                                                  3
+
+
+
+
+
+
+TELNET(1)           UNIX Programmer's Manual            TELNET(1)
+
+
+
+                                             ______              renders it impossible to issue telnet commands.
+
+     Once a connection has  been  opened,  the  messages  "Remote
+     echo"  or  "Local echo" may appear.  "Remote echo" indicates
+     that typed characters will be echoed  by  the  remote  host,
+                                            ______     rather than by the UNIX system running telnet.  "Local echo"
+     indicates that typed characters will be echoed by the  local
+     host.   When  remote echo is in effect, the normal erase and
+     kill line characters will have no effect; instead, they will
+     be  transmitted  directly  to  the foreign host.  Similarly,
+     INTERRUPT (DEL), QUIT (FS), and EOF (CTRL-D)  will  also  be
+     transmitted  to  the  foreign  host.   When local-echo is in
+     effect, all these characters will have  their  usual  effect
+     except INTERRUPT, which will send a TELNET Interrupt-Process
+     command.
+
+____BUGS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Printed 8/3/81                                                  4
+
+
+
+
+
+

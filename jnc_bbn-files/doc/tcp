@@ -1,0 +1,2400 @@
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      UNIX TCP User's Guide
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               -1-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+1.  Introduction
+
+
+     The TCP, or Transmission Control Protocol  [1],  provides  a
+
+facility for processes to communicate over the ARPANET, or across
+
+nets,  in  a  byte-stream  fashion.   This document describes the
+
+design overview and functional description of  an  implementation
+
+of the TCP for UNIX.
+
+
+     Two  processes  on distinct hosts communicate by first using
+
+the TCP to establish a full-duplex stream-oriented  communication
+
+path  and  then using the TCP program to forward and receive data
+
+on their behalf.  Thus, the TCP is responsible for  handling  the
+
+mechanics of establishing and destroying the communication paths,
+
+packaging  the  stream  into  packets  for  network transmission,
+
+performing flow control,  and  coordinating  acknowledgments  for
+
+data successfully transferred.
+
+
+        All TCP activity within UNIX is coordinated by  a  single
+
+process,  termed  the  TCP process.  The TCP process (1) accesses                       ___ _______
+
+the network using a  device   driver   implemented   within   the
+
+UNIX   system,  (2)  implements   the   TCP   protocol,  and  (3)
+
+interfaces  to   application processes.  A collection of  library
+
+routines  which  implement the interface to the TCP process using
+
+UNIX  interprocess  communication  facilities  is  available  for
+
+application programs.
+
+
+
+
+
+
+                               -2-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     An  application  process  is  termed  a  user.   All  of the                                              ____
+
+interprocess communications used in this implementation are based
+
+on  the  RAND  port  mechanism[3]  with  some  additional   minor
+
+modifications  to  UNIX.   To  avoid  confusion  with  the use of
+
+"ports" in the TCP specification, the Rand  port  mechanism  will
+
+always be referenced as a "UNIX port".
+
+
+     The  details  of  this design, the functional specifications
+
+for  the  library  routines,  and  the  extensions  to  the  UNIX
+
+operating   system  to  augment  the  interprocess  communication
+
+facilities are the subject of the rest of this document.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               -3-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+2.  System Description
+
+
+
+     Figure 2-1 illustrates the design of the TCP system, showing
+
+all of the interactions involved when  two  user  processes  each
+
+have a single open connection.
+
+
+     The  TCP  process  is the center of activity in this design.
+
+It  interfaces  to  the  network  via  the  UNIX  device  driver,
+
+implements  the  TCP  protocol,  and interfaces to user processes
+
+using UNIX ports as communication links.
+
+
+        The TCP process is structured in two  modules,  the  core
+
+and  the  driver.   The  core module is a derivative of the TCP11
+
+program [2], modified for the UNIX  environment  and  to  support
+
+multiple  connections.  It implements the actual machinery of the
+
+TCP, but  interfaces  to  the  real  time  clock,  network,  user
+
+processes, and storage manager, via the driver module.
+
+
+        The  driver  module  implements the interface protocol to
+
+user processes, and contains  a  task  scheduler  to  direct  the
+
+core's  attention  to various connections in turn for processing.
+
+It acts essentially as a scheduler, allocating the  resources  of
+
+the  core  among  the active connections, demultiplexing incoming
+
+network  traffic,  and  performing  general  resource  management
+
+within the TCP process.
+
+
+
+
+
+
+                               -4-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      Figure 2-1 TCP System
+
+
+
+
+
+
+                               -5-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+2.1  Interactions Between the TCP and User Processes
+
+
+     User  processes  access  the  TCP  facilities by use of UNIX
+
+ports to communicate with  the  TCP  process.   The  TCP  process
+
+maintains  a  single  port,  called the TCP ear, which is used to                                        ___ ___
+
+initiate interactions between a user and the TCP.
+
+
+     All communication between the processes is handled in  terms
+
+of  messages,  which  are  simply  packages of information passed
+
+between the user  and  TCP  processes.   These  packages  have  a
+
+defined  format,  which  specifies the identity of the sender, an
+
+op-code, and other information.
+
+
+     A user process sends a message to the TCP ear to inform  the
+
+TCP  process  of  its  desire  to  use  the TCP facilities.  This
+
+message initiates the establishment of a  pair  of  private  UNIX
+
+ports between the TCP and the user which sent the message.  These
+
+ports  are termed the command and response ports, and are used to                      _______     ________
+
+convey commands from the user to the TCP process,  and  responses
+
+from  the  TCP  process  to the user.  Commands and responses are
+
+simply messages whose op-codes identify them as such.
+
+
+
+     One  command  is  used  to  request  that  a  specific   TCP
+
+connection  be  opened.   This  initiates the establishment of an
+
+additional pair of ports between the user and  TCP  processes  to
+
+carry  the  data  for  that  connection.   A  pair  of  ports  is
+
+
+
+
+                               -6-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+established for each connection opened, and serves  as  buffering
+
+for the incoming and outgoing data streams.
+
+
+     The  details  of  the protocol used in communication between
+
+the TCP  process  and  its  users  are  supplied  in  a  separate
+
+document[4] discussing the implementation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               -7-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.  TCP LIBRARY ROUTINES
+
+
+     One  view of the TCP system  is  defined  by  the facilities
+
+provided by the TCP library, written in C.  The  library  creates
+
+one  of  several  possible environments in which  an  application
+
+program could use TCP.  Other library interfaces could be written
+
+to  serve  special  needs  as required.
+
+
+     This  section describes the functional specifications of the
+
+library  routines,  which  provide  a  user  interface   to   the
+
+communication  protocol  used between the TCP and user processes.
+
+
+        The library routines in general return a value  which  is
+
+TRUE  to  indicate  success.  If the requested operation fails, a
+
+FALSE  (i.e.,  0)   will   be   returned,   and   the    external
+
+variable  TCP_error   will   be   set   to  a code indicating the
+
+reason for the error.  Mnemonics are assigned to each code.   The
+
+list   of   error mnemonics, their assigned code numbers, and the
+
+actions which are capable of producing each error are  summarized
+
+in Appendix C.
+
+
+     The errors are classified in five groups, which may overlap.
+
+These  are  identified  by  a code letter enclosed in brackets in
+
+each instance.  The groups specify one or more reasons  for  each
+
+particular error, as follows.
+
+
+
+
+
+
+
+                               -8-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     If  the communication paths between the user process and the
+
+TCP process are not functioning properly, errors may be reported.
+
+These are flagged with the code 'C', and generally imply that the
+
+file system or the TCP process  is  failing.   The  user  process
+
+should treat such errors as fatal.
+
+
+     Errors  which are flagged with the code 'U' may be generated
+
+because of a user programming error.
+
+
+     Because of the use of dynamic buffers within the TCP library
+
+routines, there may be temporary shortages.  These will  generate
+
+errors  flagged with 'I' codes.  The user process may treat these
+
+as temporary errors, and retry the operation after, for  example,
+
+reading  data  from  a  different  connection,  which may release
+
+buffers so that the subsequent try will  succeed.   If  too  many
+
+connections  are  in  use at the same time, the supply of buffers
+
+may be inadequate,  which  may  be  remedied  by  recreating  the
+
+library routines appropriately.
+
+
+     The  TCP  process also uses dynamic buffer allocation, which
+
+may result in generation of errors flagged with 'X' codes.   This
+
+should be viewed as a potentially temporary error, worth retrying
+
+after a short wait.
+
+
+     Finally,   the   library   and   TCP   processes  check  for
+
+compatibility between themselves, and may generate 'V' errors  if
+
+
+
+
+
+                               -9-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+different  versions attempt to communicate.  The solution to such
+
+errors is to  make  sure  that  the  installed  versions  of  the
+
+programs involved are compatible.
+
+
+        For each of the library routines,  the  calling  sequence
+
+and  related  structure  definitions  are  provided,  as  well as
+
+enumeration of possible errors which may occur.
+
+
+     Many of the routines use a timeout parameter,  to  give  the
+
+user  control of the interactions between the library and the TCP
+
+process.  The timeout parameter  is  used  only  to  control  the
+
+length of time permitted in the negotiations with the TCP process
+
+itself.   The command procedure involves sending a message to the
+
+TCP process, and waiting for a reply.  Because the TCP process is
+
+a shared resource, it may be busy, and the reply may be  delayed.
+
+The  user process can specify a maximum length of time to wait by
+
+use of the timeout parameter.  Timeouts are primarily intended to
+
+avoid blocking the user process indefinitely in case of a  system
+
+malfunction or TCP crash.  User programs should specify a timeout
+
+large   enough  to  handle  all  normal  delays,  and  treat  any
+
+occurrence of a timeout as a fatal error.  A typical value  might
+
+be 15 seconds.
+
+
+
+
+
+
+
+
+
+
+
+                              -10-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.1  TCP_listen
+
+
+        The TCP_listen routine is used to establish contact  with
+
+the   TCP   process.  It  sets  up the command and response ports
+
+between the user process and the TCP process, without opening any
+
+connections.   If  called  while  the  user  process  is  already
+
+actively  utilizing  the  TCP,  it  acts  as  a  reset   command,
+
+aborting   any    open    connections    before   attempting   to
+
+re-establish  contact  with  the TCP process.  TCP_listen must be
+
+successfully called before any TCP connections may be opened.
+
+
+     Calling Sequence:
+      TCP_Listen(tm);
+       where:
+      int tm;         /* timeout, in seconds */
+
+     Function:
+      Establishes contact between the user process
+      and the TCP process. If called while TCP activity
+      is in progress, resets by aborting any open
+      connections.
+
+     Arguments:
+      tm -- timeout value, i.e. how long in seconds
+            TCP_listen should wait for the TCP process
+            to reply
+
+     Returns:
+      TRUE if successful, FALSE on error
+
+     Possible Error Codes:
+        EEARPRT[CXI]  -- open of TCP ear port failed
+                      -- message send failed
+        ERSPPRT[CXIV] -- couldn't create response port
+                      -- error in read from response port
+                      -- bad response received
+        ENOBUFS[I]    -- couldn't allocate buffer
+        ECMDPRT[C]    -- unable to open command port
+        ETCPNRDY[X]   -- TCP not responding within time specified
+
+
+
+
+                              -11-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.2  TCP_quit
+
+
+     The inverse operation to  TCP_listen  is  performed  by  the
+
+TCP_quit  routine.  TCP_quit will cleanly break the communication
+
+paths to the TCP.  If any connections were still open, they  will
+
+be  aborted  (see TCP_abort).  This routine should be called when
+
+TCP activity is complete,  in  order  to  release  the  resources
+
+allocated  within  both  the  user  process  and the TCP process.
+
+Killing the user process will have the  same  effect  as  calling
+
+TCP_quit.
+
+
+     Calling sequence:
+      TCP_quit();
+
+     Function:
+      Finishes usage of the TCP by the user process.
+      Releases all resources, and aborts any remaining
+      connections.
+
+     Arguments:
+      None
+
+     Returns:
+      TRUE if successful, else FALSE
+
+     Possible Error Codes:
+      None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -12-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.3  TCP_open
+
+
+     The  TCP_open  routine  is  used to create a TCP connection.
+
+The parameters of the connection are specified  by  a  connection                                                       __________
+
+address  block  structure, or cab.  The contents of the structure_______  _____                ___
+
+specify the address of the foreign socket as well  as  the  local
+
+address  components  which  the  user is permitted to specify.  A
+
+mask is also supplied to specify which events  will  trigger  the
+
+issuance  of  change-notices,  as  discussed with the TCP_receive              ______ _______
+
+specifications.
+
+
+     If the connection is accepted by the TCP  process,  TCP_open
+
+will  return  a pointer to a structure termed a user transmission                                                ____ ____________
+
+control block, or utcb, which is used to identify the  connection_______ _____     ____
+
+for   other   routine   calls.   The  connection  itself  is  not
+
+necessarily 'established' in the TCP sense,  since  the  call  to
+
+TCP_open  returns  before  the  TCP  process begins the handshake
+
+procedure with the foreign TCP.
+
+
+        For partially specified connections, the TCP   does   not
+
+begin  the handshake until an acceptable message arrives from the
+
+foreign  site.   For   fully   specified   connections,  the  TCP
+
+will normally  begin  the  handshake  procedure   by  sending  an
+
+initial  message  to  the specified foreign socket.  This may  be
+
+suppressed by  specifying  the connection to  be  listen-only  as
+
+described  below.   The TCP will not initiate a handshake in this
+
+
+
+
+                              -13-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+case, but  will,  of  course,  respond  to  an  incoming  message
+
+directed to the connection.  If the user process attempts to send
+
+data  on  a  listen-only  connection  which  has  not  yet become
+
+established, the TCP will change the connection type  to  normal,
+
+and initiate the handshake procedure at that time.
+
+
+
+     Calling Sequence:
+      pt=TCP_Open(c, tm, f)
+       where:
+      struct cab *c ;         /* specifies connection */
+      int tm ;                /* in seconds */
+      char f ;                /* mode of opening */
+      struct utcb *pt ;       /* if successful */
+
+     Function:
+      Creates a TCP connection, obtaining a pointer
+      to a utcb to be used for subsequent data transfers.
+      Optionally begins establishment of the connection
+      with the foreign TCP.
+
+     Arguments:
+        c  -- a cab structure, as defined below
+        tm -- time to allow for the TCP to reply to the
+              open request
+        f  -- mode bits.  Assigned bits are:
+              01 -- open as a listen-only connection
+
+        Returns:
+         TRUE, pointer to utcb, FALSE on error
+
+        Possible Error Codes:
+        ETCPNRDY[X]   -- TCP took too long to respond
+        ECMDPRT[C}    -- error in use of command-port
+        ERSPPRT[CV]   -- error in use of response-port
+        ETCPBAD[V]    -- illegal message from TCP process
+                         (not conforming to the protocol)
+        EUNKR[V]      -- unknown type of message from TCP
+        ENOBUFS[IX}   -- either the user process or TCP
+                         process is short of buffer space
+        ESNDPRT[CIX]  -- couldn't open send-port
+        ERCVPRT[CIXV] -- couldn't open receive-port
+                      -- error in reading from receive-port
+
+
+
+
+                              -14-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+                      -- message received violates protocol
+        EUSRC[I]      -- too many connections in this process
+        ESYSC[X]      -- too many connections system-wide
+        ESYSF[X]      -- too many processes using TCP
+        EINUS[X]      -- connection already open by someone
+        EILLLS[U]     -- illegal port specification
+
+
+     The   connection   to  be  opened  is  specified  by  a  cab
+
+(connection address block) structure, defined as follows.
+
+
+struct  cab {
+        char    c_lph ;    /* local port, high byte */
+        char    c_xx1 ;    /* used internally */
+        int     c_lpm ;    /* local port, low 2 bytes */
+        char    c_fnid ;   /* destination net */
+        char    c_ftidh ;  /* foreign TCP, high byte */
+        int     c_ftid ;   /* destination host (low 2 bytes) */
+        char    c_fph ;    /* destination high byte */
+        char    c_xx2 ;    /* used internally */
+        int     c_fpm ;    /* destination port (low bytes) */
+        int     c_cnmask ; /* change-notice mask */
+};
+
+
+     The elements specified as used internally will  be  used  by
+
+the TCP_open routine for temporary storage.
+
+
+     The foreign net, host, or port, or some combination of these
+
+may   be  unspecified,  by  supplying  zero  value(s)  for  those
+
+elements.  The following combinations are permitted:
+
+
+                        Net    Host    Port                        ___________________
+
+                         S       S       S
+                         S       S       U
+                         S       U       U
+                         U       U       U
+
+     Where S = Specified, U = Unspecified.
+
+
+
+
+
+                              -15-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+        A connection with any unspecified foreign  parameters  is
+
+inherently  open for 'listening'.  Any data sent by the  user  on
+
+such a connection will be queued for sending by the TCP, and will
+
+be  sent  when the connection finally becomes established to some
+
+specific foreign socket.  When the first message arrives for such
+
+a connection, it becomes  totally  specified,  by  replacing  any
+
+previously  unspecified  foreign parameters with those present in
+
+the message.  The user may determine the values of these, as well
+
+as other parameters, by use of the TCP_status facility.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -16-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.4  TCP_close
+
+
+     The TCP_close routine is used to initiate a close procedure.
+
+It will cause the TCP process to transmit a close request to  the
+
+foreign  TCP.   The  TCP_close routine will return as soon as the
+
+close command is accepted by the  TCP  process.   The  connection
+
+will  remain  open  until the close procedure has been completed.
+
+The user process may wait for a  change-notice  to  arrive  which
+
+signals the completion of the close procedure.
+
+
+     Note that the connection may be used for receiving data even
+
+after  the  close  has been requested, until the connection state
+
+becomes 'closed', by negotiation with the foreign TCP.  Any  data
+
+that  remains  in  the  TCP buffers for transmission when a close
+
+completes is discarded.
+
+
+     Calling Sequence:
+      TCP_close(pt,tm)
+       where
+      struct utcb *pt ;       /* from TCP_open */
+      int tm ;                /* timeout */
+
+     Function:
+      Begins the close procedure.
+
+     Arguments:
+        pt -- pointer returned by TCP_open
+        tm -- timeout limit in seconds
+
+        Returns:
+         TRUE if successful, FALSE on error
+
+        Possible Error Codes:
+        ETCPNRDY[X}   -- TCP took too long to respond
+        ECMDPRT[C}    -- error in use of command-port
+
+
+
+
+                              -17-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+        ERSPPRT[CV]   -- error in use of response-port
+        ETCPBAD[V]    -- illegal message from TCP process
+                         (not conforming to the protocol)
+        EUNKR[V]      -- unknown type of message from TCP
+        ENOBUFS[X]    -- buffer shortage
+
+
+
+     The library routines, as well as  the  TCP  process  itself,
+
+allocate  buffers and table space for each open connection.  This
+
+space is released only when the user calls the TCP_abort routine.
+
+It is important for the user  process  to  follow  all  TCP_close
+
+calls  with  a  call  to  TCP_abort,  even  if  the connection is
+
+reported  to  have  been  'closed'  by  a  change  notice.    The
+
+separation  of the procedure to close the connection from that to
+
+release the storage used by the connection permits user processes
+
+to obtain statistics information by using TCP_status  even  after
+
+the connection is closed.
+
+
+
+     The  typical  sequence  of  operations in finishing use of a
+
+particular connection is to call TCP_close to initiate the  close
+
+procedure,   and  wait  for  a  change-notice  (see  TCP_receive)
+
+indicating that the close procedure is complete.  After receiving
+
+this information, TCP_status may optionally be  used  to  collect
+
+statistics,  and  then  the  connection resources are released by
+
+calling TCP_abort.
+
+
+
+
+
+
+
+
+
+                              -18-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.5  TCP_abort
+
+
+     The TCP_abort routine, if called before  a  close  procedure
+
+has  completed,  serves  to destroy the specified TCP connection,
+
+without waiting for the foreign  TCP  to  acknowledge.   It  also
+
+serves  the  purpose  of cleaning up the tables and buffers which
+
+were allocated to the connection.
+
+
+     Calling Sequence:
+      TCP_abort(pt,tm)
+       where
+      struct utcb *pt ;       /* from TCP_open */
+      int tm ;                /* timeout */
+
+     Function:
+      Destroys a TCP connection, and releases all
+      resources assigned to the connection.
+
+     Arguments:
+      pt -- pointer obtained from TCP_open
+      tm -- timeout limit in seconds
+
+     Returns:
+      TRUE if successful, FALSE on error
+
+     Possible error Codes:
+        ETCPNRDY[X]   -- TCP tooke too long to respond
+        ECMDPRT{C}    -- error in use of command-port
+        ERSPPRT[CV]   -- error in use of response-port
+        ETCPBAD[V]    -- illegal message from TCP process
+                         (not conforming to the protocol)
+        EUNKR[V]      -- unknown type of message from TCP
+        ENOBUFS[X]    -- buffer shortage
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -19-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.6  TCP_send
+
+
+     The TCP_send routine  is  used  to  send  data  over  a  TCP
+
+connection.   It  requires as an argument a pointer to a utcb, as
+
+returned  by  TCP_open.   Data  given  to  TCP_send  is  buffered
+
+internally  for  transmission  to  the  TCP  process.  Therefore,
+
+TCP_send will actually do I/O to transfer data to the TCP process
+
+only when the internal buffer fills, or when it is instructed  to
+
+send  immediately.   Large  data  transfers  will  be  split into
+
+smaller chunks for transfer to the TCP process.   The  TCP_status
+
+routine  can  be used to obtain information concerning the buffer
+
+sizes being used.
+
+
+     Two switch parameters to the TCP_send routine  are  used  to
+
+control  initiation  of  data  transfer.   Either the 'go' or the
+
+'eol'  flag will cause the transfer of the  current  data  buffer
+
+within  the  user  process  even  if the buffer is not full.  The
+
+'eol' flag is also used to indicate that the  last  byte  of  the
+
+supplied data should also be marked as end-of-letter.
+
+
+     Calling Sequence:
+      TCP_send(pt, b, l, go, eol);
+       where
+      struct utcb *pt ;  /* from TCP_open */
+      char *b ;          /* pointer to data */
+      int l ;            /* length of data in bytes */
+      int go ;           /* 'go' flag */
+      int eol ;          /* 'eol' flag */
+
+     Function:
+      Send a data stream over a TCP connection.
+
+
+
+
+                              -20-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     Arguments:
+        pt  -- pointer from TCP_open
+        b   -- pointer to byte stream to be sent
+        l   -- number of bytes to send
+        go  -- boolean, if true, send immediately
+        eol -- boolean, if true, indicate eol
+               (also send immediately)
+        Returns:
+         TRUE if successful, FALSE on error
+
+        Possible error codes:
+        ESNDPRT[C]    -- The communication path to the
+                         TCP process for this connection
+                         is failing.
+        ENOBUFS[I]    -- No internal buffers are available
+                         within the user process.
+
+
+
+     The  flag  arguments  follow  standard  UNIX conventions for
+
+boolean values.  TRUE implies that the flag is set.
+
+
+     The routine will return after the data has been written into
+
+the port from  the  user  to  the  TCP  process,  if  that  write
+
+operation  was  necessary.   Note  that  large data transfers may
+
+cause several write operations to occur.
+
+
+     If the UNIX port to the TCP process becomes full,  the  user
+
+process  will  be  blocked  until the data being transferred will
+
+fit.  To avoid blocking the user process, if  desired,  calls  to
+
+TCP_check or TCP_status should be made to determine how much data
+
+can be written without blocking, before calling TCP_send.
+
+
+
+
+
+
+
+
+
+
+                              -21-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.7  TCP_receive
+
+
+     The  TCP_receive  routine  performs the inverse of TCP_send.
+
+The user supplies TCP_receive with a buffer area, into which  the
+
+incoming  data  stream  will be placed.  TCP_receive accepts data
+
+from  the  TCP  process  in  packages,  transfers  it  into   the
+
+user-supplied  area until it is filled, an incoming end-of-letter
+
+is encountered, or no more data is available.
+
+
+     In addition to data,  TCP_receive  processes  change-notices                                                   ______ _______
+
+received  from  the TCP process, and passes these on to the user.
+
+A change notice is simply  a  word  of  data  which  encodes  the
+
+occurrence  of  several possible state changes of the connection,
+
+such       as        connection-established,        network-down,
+
+remote-close-received,  and so on.  The user process may use this
+
+information as desired.  One possible usage would be  to  trigger
+
+calls  to  TCP_status  when  some  change-notice  is received, to
+
+obtain more detailed information.  An enumeration of the possible
+
+change-notices is in Appendix D.  The set of state changes  which
+
+will trigger issuance of a change-notice is specified in the call
+
+to TCP_open for the connection in question.
+
+
+
+     When  a user process executes a call to TCP_receive, the TCP
+
+will return some data, a change notice,  or  an  indication  that
+
+zero  data  bytes  were received, if no data is available. In the
+
+
+
+
+
+                              -22-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+first two cases, subsequent calls to  TCP_receive  may  be  made,
+
+until all data and change-notices are exhausted.
+
+
+     As  with  TCP_send,  this routine uses an internal buffer to
+
+hold data until the user accepts it.   TCP_check  and  TCP_status
+
+may  be  used  to  determine  the amount of data remaining in the
+
+internal buffer, as well as in the port between the user and  TCP
+
+processes.
+
+
+     Note  that,  unlike TCP_send, a call to TCP_receive will not
+
+suspend  the  process  if  no  data  is   available.    In   some
+
+applications,  it may be desirable to suspend execution of a user
+
+process until some data is available.  Because a user process may
+
+have several connections active simultaneously, it  is  necessary
+
+to  be  able  to suspend a process until data is available on any
+
+channel.  To accomplish this, the user process may  directly  use
+
+the  process-control  extensions to UNIX, as discussed in Section
+
+4.3.
+
+
+     Calling Sequence:
+      cnt=TCP_receive(pt, b, l, eol, flg)
+       where
+      struct utcb *pt ;  /* from TCP_open */
+      char *b ;          /* buffer area */
+      int l ;            /* maximum buffer length */
+      int *eol ;         /* set to indicate e-o-l */
+      int *flg ;         /* set to indicate type */
+      int cnt ;          /* bytes received, if flg=0 */
+
+     Function:
+      Receive a data stream from a TCP connection,
+      or a change-notice concerning the connection
+
+
+
+
+                              -23-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+      state.
+
+     Arguments:
+        pt  -- pointer from TCP_open
+        b   -- pointer to area in which to place data bytes
+        l   -- maximum number of bytes to be transferred
+        eol -- pointer to integer, to be set to indicate
+               end-of-letter.
+        flg -- pointer to integer, to be set to indicate
+               whether data or a change notice is returned
+        cnt -- number of bytes transferred if flg indicates
+               data was received
+
+
+     Returns:
+      TRUE if something received:
+       if flg is FALSE, data was received, cnt is count
+          of bytes placed into the user buffer (may be zero)
+       if flg is TRUE, a change notice was received, and
+          flg is the change-notice value.  No data was
+          placed in the buffer.
+      FALSE if error
+
+     Possible error codes:
+      ERCVPRT[C] -- i/o error on port from TCP
+      ETCPBAD[V] -- unknown type of message from the TCP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -24-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.8  TCP_status
+
+
+     The TCP_status routine is used to obtain current information
+
+concerning the state of a TCP connection.  It issues a command to
+
+the TCP process requesting information concerning  the  specified
+
+connection,  and  uses  the data obtained with some local data to
+
+fill in a user-supplied cstatus structure.  The user program  may                        _______
+
+use the information obtained in the cstatus structure as desired.
+
+Generally   this   information  falls  in  two  categories,  that
+
+concerned with the TCP connection itself, and that concerned with
+
+the link  between  the  user  and  TCP  processes.   The  cstatus
+
+structure is defined as follows.
+
+
+struct cstatus {
+
+        struct  cab c_cab;  /* for picking up specified
+                               params */
+        int c_sndspace ;    /* bytes to write before sending
+                               to the TCP */
+        int c_sndblock ;    /* bytes to write before blocking
+                               may happen */
+        int c_rcvspace ;    /* bytes to read before reading
+                               from TCP */
+        int c_rcvblock ;    /* bytes available (not text)
+                               before blocking */
+        int c_sndsct ;      /* various relevant params from
+                               statistics vars */
+        int c_nr_pkt ;      /* # packets rcvd */
+        int c_pr_dup ;      /* # duplicates rcvd */
+        int c_pr_bsy ;      /* # discarded packets */
+        int c_pr_dmg ;      /* # damaged packets */
+        int c_nr_txt ;      /* # text packets rcvd */
+        int c_ns_rtx ;      /* # packets retransmitted */
+        int c_sndfds ;      /* file descriptors opened port */
+        int c_rcvfds ;      /* file descriptors of receive port */
+};
+
+
+
+
+
+                              -25-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     The 'space' elements in the structure indicate the amount of
+
+buffer  area,  for  sending, or data, for receiving, remaining in
+
+the internal buffers.  The 'block' values represent lower  bounds
+
+on  the amount of buffer area or data remaining in the data ports
+
+between the user and TCP processes.
+
+
+     The cstatus structure may contain the cab originally used to
+
+open the connection.  This is used primarily to obtain the actual
+
+values of originally  unspecified  connection  address  elements,
+
+after the connection becomes established.
+
+
+     Calling Sequence:
+      TCP_status(pt, tm, ps)
+       where
+      struct utcb *pt ;
+      int tm ;
+      struct cstatus *ps ;
+
+     Function:
+      Obtains current status information from the
+      TCP process, and fills in the elements of
+      the user-supplied cstatus structure.
+
+     Arguments:
+      pt -- pointer from TCP_open
+      tm -- timeout limit in seconds
+      ps -- pointer to cstatus structure to be filled in
+
+     Returns:
+      TRUE if status obtained, FALSE on error
+
+     Possible Error Codes:
+        ETCPNRDY[X]   -- TCP took too long
+        ECMDPRT[C]    -- error in use of command-port
+        ERSPPRT[CV]   -- error in use of ressponse-port
+                      -- bad message (not an ERR or OK)
+                         from TCP
+        ETCPBAD[V]    -- illegal message from TCP process
+                         (not conforming to the protocol0
+
+
+
+
+                              -26-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+        EUNKR[V]      -- unknown type of message from TCP
+        ENOBUFS[IX]   -- buffer shortage
+
+
+
+     The  statistics elements may be used to monitor performance.
+
+Note that TCP_status may be called after the connection has  been
+
+closed,  but before it is aborted, to determine statistics for an
+
+entire connection lifetime.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -27-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+3.9  TCP_check
+
+
+     The TCP_check routine is used to obtain updated  information
+
+on  the  capacities  of  the  data ports between the user and TCP
+
+processes, without interacting with the  TCP  process.   It  uses
+
+system  calls  to  determine  the  status  of  the two ports, and
+
+updates the related 'space' and 'block' elements  of  a  supplied
+
+cstatus structure.
+
+
+     TCP_check  is intended as a simplified status command, to be
+
+used primarily  for  determining  whether  data  may  be  written
+
+without blocking.
+
+
+     Calling Sequence:
+      TCP_check(pt, ps)
+       where
+      struct utcb *pt ;
+      struct cstatus *ps ;
+
+     Function:
+      Places accurate values in the c_sndspace,
+      c_sndblock, c_rcvspace, and c_rcvblock
+      elements of the supplied cstatus structure.
+
+     Arguments:
+      pt -- pointer from TCP_open
+      ps -- pointer to cstatus structure to be updated
+
+     Returns:
+      TRUE if information obtained, FALSE on error
+
+     Possible Error Codes:
+      ESNDPRT[C] -- i/o error
+      ERCVPRT[C] -- i/o error
+
+
+
+
+
+
+
+
+                              -28-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+4.  Interprocess Communication Extensions to UNIX
+
+
+     Several   changes   have   been   made  to  UNIX  to  permit
+
+implementation of  an  efficient  TCP.   Some  of  these  may  be
+
+directly relevant to the user of the TCP library.
+
+
+5.  Capacity
+
+
+     Standard  UNIX  does not permit a user to determine how much
+
+empty space is available before  it  does  a  write  system  call
+
+(similarly  for  a  read).   Standard  UNIX  has been extended to
+
+provide an Empty call so that a process may determine  whether  a
+
+one  byte read would hang or not.  There is no similar call for a
+
+write.  The UNIX interprocess communication extensions provide  a
+
+Capacity call which tells how many bytes are available for a read
+
+if  the  file descriptor is for a file which is open for reading,
+
+and returns the number of bytes which may  be  written  into  the
+
+file wouthout suspending the process.
+
+
+     This  facility  is  used by the TCP library routines, and is
+
+not needed at the user level for TCP activity.   The  details  of
+
+the  syntax  and  semantics  of  Capacity  are  presented  in the
+
+interprocess communications document[5].
+
+
+
+
+
+
+
+
+
+
+
+                              -29-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+6.  Await
+
+     In standard UNIX, when a user reads from an  empty  pipe  or
+
+port,  or  writes  to a full one, the user's process is suspended
+
+until that read or write is satisfied.
+
+
+Thus, should a user have two or more ports, which may produce  or
+
+accept data in any sequence it cannot dismiss but rather must run
+
+continuously  to  poll these ports.  The capacity call makes such
+
+polling possible.  A  system  call  has  been  implemented  which
+
+causes  a  process  to dismiss until a time, or one of a specific
+
+set of events occurs, such as data  becoming  available  on  some
+
+input port, or space on some output port.
+
+
+
+     The  details  of  usage  of  the AWAIT call are defined in a
+
+separate document concerning the UNIX IPC facilities.  Use of the
+
+TCP does not require the AWAIT facility, which is made  available
+
+primarily   to   improve   system   efficiency  by  providing  an
+
+alternative to busy-waiting or polling.
+
+
+7.  Usage of Await and Capacity
+
+
+     The TCP process itself requires the system  support  of  the
+
+Await  and  Capacity extensions.  User processes interacting with
+
+the TCP process via the TCP library facilities use  the  Capacity
+
+call,  which  is  executed  by the library routines internally to
+
+detect  the  status  of  the  ports  between  the  user  and  TCP
+
+processes.
+
+
+                              -30-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     The library routines provide no means to wait for any event,
+
+since,  in general, the set of events which may be appropriate to
+
+activate the user process is not available  to  the  TCP  library
+
+routines.   A user process may, howevever, use the Await facility
+
+directly by enabling wakeups on any events of interest,  as  well
+
+as those associated with the TCP activity.
+
+
+     The  details  of  usage  of  the Await facility are detailed
+
+elsewhere[5].  To use the facility, the user process must be able
+
+to determine  the  file  descriptors  associated  with  each  TCP
+
+connection.   The  TCP-check  routine  can  be used to obtain the
+
+values, so they can be used to specify when to activate the  user
+
+process,  as  explained in the description of the IPC facilities.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -31-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+References
+
+
+[1]  V. Cerf, Specification of Internet Transmission Control
+
+     Program, TCP (Version 2), March 1977.
+
+
+[2]  J. Mathis, Single-Connection TCP Specification,
+
+     Telecommunications Sciences Center, SRI, Menlo Park,
+
+     CA  94025, August 1977.
+
+
+[3]  C. Sunshine, Interprocess Communication Extensions
+
+     for the UNIX Operating System:  I.  Design Considerations;
+
+     and S. Zucker, Interprocess Communication Extensions
+
+     for the UNIX Operating System:  II.  Implementation;
+
+     R-2064/1-AF and /2-AF, Rand Corporation,
+
+     Santa Monica, CA  90406, June 1977.
+
+
+[4]  J. Haverty, [UNIX TCP Implementation...]
+
+
+[5]  R. Rettberg, IPC Standard, Bolt Beranek and Newman Inc.,
+
+     Cambridge, MA  02138 (in preparation).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -32-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+Appendix A - UNIX Port Usage
+
+
+     The general specifications of the UNIX  port  mechanism  are
+
+defined  in  a report by the Rand Corporation[3].  For use of the
+
+TCP, the configuration of ports which are utilized is  summarized
+
+here  for reference.  In general, the library routines handle the
+
+details of the usage of UNIX ports for TCP activity.
+
+
+     For the TCP usage, ports are generally  used  to  provide  a
+
+unidirectional  data  stream between two processes, i.e., the TCP
+
+and the user processes.  One exception to this rule  is  the  TCP
+
+ear port, which is the only port carrying data from more than one
+
+sender.
+
+
+     A port is always established by the receiver, and must be in
+
+existence  before  the  sender can perform an open to write data.
+
+Such ports, by convention in the TCP  design,  are  created  with
+
+specifications  that  the  system (UNIX) prepend a full header to
+
+each message sent.  Ports are created by the intended  receiver's
+
+execution of a PORT system call:
+
+
+     port(name,0170222,0) -- C calling sequence
+
+               In  this  call,  the name is a pointer to an ASCIZ
+          string name of the port.  The  0170222  argument  is  a
+          specific  value  of  the mode argument, which selects a
+          full header option on  data  transfers.   The  final  0
+          argument  specifies  that  the  port  be opened (by the
+          receiver) for reading only.
+
+
+
+
+
+
+                              -33-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     port -- trap 59 is the system call for port
+     cmdnam
+     170222
+
+               In the  assembly  language  version  of  the  port
+          operation,  the  port  call is followed by a pointer to
+          the name string, and the mode  word.   It  returns  the
+          file  descriptor, to be used for subsequent read calls,
+          in R0.
+
+
+     The sender process opens a port exactly  as  if  it  were  a
+
+normal  file, using the OPEN system call.  The only difference is
+
+that the open will fail if the receiver has not already  executed
+
+the port call to create the port.
+
+
+     In  general,  processes  about to create a port should first
+
+use the system UNLINK call, to destroy any  previous  incarnation
+
+of  the  port.   Because  port names are derived from the process
+
+ids, any such port file which is pre-existing is necessarily from
+
+a now-nonexistent process.
+
+
+
+     Some consequences of the port implementation should also  be
+
+noted.   Ports  are  used  as  if they are private unidirectional
+
+paths between a user process and the TCP.   However,  the  access
+
+control  mechanisms  do  not permit such fine-grained control, so
+
+that the ports can, in general, be  opened  for  writing  by  any
+
+process.   Because of the full port header, a receiver can always
+
+determine the identity of the sender of any message, and  discard
+
+spurious messages if any occur.
+
+
+
+
+
+                              -34-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+Appendix B -- C Structure Definitions
+
+
+     The  current  structure definitions which may be accessed by
+
+user  programs  are  summarized  below.   These  definitions  are
+
+available in on-line files as well.
+
+
+struct  cab {
+     char    c_lph ;   /* local port, high byte */
+     char    c_xx1 ;   /* used internally */
+     int     c_lpm ;   /* local port, low 2 bytes */
+     char    c_fnid ;  /* destination net */
+     char    c_ftidh ; /* foreign TCP, high byte */
+     int     c_ftid ;  /* destination host (low 2 bytes) */
+     char    c_fph ;   /* destination port, high byte */
+     char    c_xx2 ;   /* used internally */
+     int     c_fpm ;   /* destination port (low 2 bytes) */
+     int     c_cnmask  /* change-notice mask */
+};
+
+
+
+struct cstatus {
+        struct cab c_cab;   /* for picking up specified
+                               params */
+        int c_sndspace ;    /* bytes to write before sending
+                               to the TCP */
+        int c_sndblock ;    /* bytes to write before blocking
+                               may hapen */
+        int c_rcvspace ;    /* bytes to read before reading
+                               from TCP */
+        int c_rcvblock ;    /* bytes available (not text)
+                               before blocking */
+        int c_sndsct ;      /* various relevant params from
+                               statistics vars */
+        int c_nr_pkt ;      /* # packets rcvd */
+        int c_pr_dup ;      /* # duplicates rcvd */
+        int c-pr_bsy ;      /* # discarded packets */
+        int c_pr_dmg ;      /* # damaged packets */
+        int c_nr_txt ;      /* # text packets rcvd */
+        int c_ns_rtx ;      /* # packets retransmitted */
+        int c_sndfds ;      /* # fds of send */
+        int c_rcvfds ;      /* # fds of rcv */
+};
+
+
+
+
+
+                              -35-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+Appendix C -- Library Routine Error Codes
+
+
+     The  following  error  code  values  are  also  available in
+
+on-line files.
+
+
+
+       EUNKR    101     /* unknown type of reply from TCP */
+       ERCVPRT  102     /* error in use of receive-port */
+       ESNDPRT  103     /* error in use of send-port */
+       EEARPRT  104     /* error in use of TCP ear-port */
+       ECMDPRT  105     /* error in use of command-port */
+       ERSPPRT  106     /* error in use of response-port */
+       ENOBUFS  107     /* couldn't allocate a buffer */
+       ETCPNRDY 108     /* TCP not responsive */
+       EUSRERR  109     /* user not following the rules! */
+       ETCPBAD  110     /* bad message (not following
+                           protocol) from TCP */
+       EUSRC    003     /* too many user connections */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -36-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+Appendix D -- Change-Notices
+
+
+     Change-notices are presented to the user by the  TCP_receive
+
+routine.   A  change-notice  is  simply  a  word of data in which
+
+events are bit-encoded. The values currently assigned to bits are
+
+enumerated below. Note  that  a  single  change-notice  may  have
+
+several  bits  set, since several events may occur before the TCP
+
+process has an opportunity to transmit  the  change-notice.   The
+
+symbols  beginning  with  the  sequence  "chg_"  are included for
+
+reference.  They are the mnemonics used internally in the TCP.
+
+
+     chg_rc  01      ;remote close received
+     chg_cc  02      ;close completed
+     chg_es  04      ;connection established
+     chg_er  010     ;error (reset rcvd in open)
+     chg_rf  020     ;connection refused
+     chg_dd  040     ;foreign tcp not responding (connection
+                     ; still open)
+     chg.io  0100    ;bug! (i/o error)
+     chg_eo  0200    ;eol has been acked by foreign site
+     chg_nu  0400    ;net up again
+     chg_nd  01000   ;net went down
+     chg_bs  02000   ;data was discarded (user busy)
+
+
+     In the case of chg_eo, several eols may have been  acked  in
+
+the  intervals  between  change-notices.   If the actual count of
+
+eols is important, the TCP_status routine may be used  to  obtain
+
+current values of c_sndsct.
+
+
+     The chg_bs notice will occur when the TCP process was forced
+
+to  discard  one  or  more arriving packets because the preceding
+
+packets had not yet been processed.  The TCP protocol is designed
+
+
+
+
+                              -37-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+to operate in an environment where packets may be lost,  so  such
+
+an  event  is not a fatal error.  A chg_bs notice indictates that
+
+either the user process did not read data fast enough, or the TCP
+
+could not process incoming packets quickly enough for the  system
+
+as a whole.
+
+
+     The  set of events which cause change-notices to be sent may
+
+be selected by the user process by supplying a mask  in  the  cab
+
+structure  given  to TCP_open.  Events which are not given in the
+
+mask will still appear in the  change-notices,  with  other  bits
+
+set,  but their occurrence will not cause any change-notice to be
+
+sent.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -38-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+Appendix E -- Implementation Costs
+
+
+     To  assist  in  planning  of  user  applications   programs,
+
+information about the TCP's usage of system resources is helpful.
+
+The  primary  resource  used  is file descriptors for the various
+
+ports between user processes and the TCP.  This impacts  both  on
+
+the  TCP  as  it  relates  to  the system, as well as on the user
+
+process.
+
+
+     Each user process known to the TCP uses two file descriptors
+
+for communication of commands and responses.  In  addition,  each
+
+connection  uses  two  additional  ports,  for  full-duplex  data
+
+transfer.  The number of files which any process  may  have  open
+
+simultaneously  is  a  parameter in UNIX set at system generation
+
+time.  This  parameter  must  be  large  enough  to  support  the
+
+intended  configuration  of  user  processes  and connections, to
+
+supply  the  TCP  process  with  an  adequate  number   of   file
+
+descriptors.
+
+
+     Similarly, the user process must have a sufficient supply of
+
+file   descriptors   to   support  the  intended  number  of  TCP
+
+connections, as well as any other I/O activity required.
+
+
+     For some applications involving many  TCP  connections,  the
+
+availability of file descriptors may be difficult to provide.  In
+
+such  a case, the TCP could be extended to permit multiplexing of
+
+data from several connections on a single pair of ports.
+
+
+
+                              -39-
+
+
+
+
+Report No. 3724                      Bolt Beranek and Newman Inc.
+
+
+     The  TCP  process  itself  is  limited  in   memory   space.
+
+Currently, each active connection is allocated two buffers within
+
+the  TCP  process  for  reassembly and retransmission.  The total
+
+number of active connections is thus limited by the address space
+
+available to  the  process.   If  necessry,  this  limit  can  be
+
+increased  by  changing  of  the  TCP to utilize a dynamic buffer
+
+pool.  These routines will supply two pieces of information.  The
+
+amount of space remaining in the internal  buffer  specifies  how
+
+much  data  may be sent before a system call will be needed.  The
+
+amount of space available in the system  port  specifies  if  the
+
+write call will suspend the user process.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -40-

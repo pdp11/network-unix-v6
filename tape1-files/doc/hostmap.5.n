@@ -1,0 +1,145 @@
+.TH HOSTMAP 5
+.SH NAME
+hostmap \*- host name-number map
+.IX "\*ihostmap\*r file"
+.IX "\*ihostmap.bin\*r file"
+.SH DESCRIPTION
+\*i/etc/net/hostmap\*r is the source for the host name-number mapping used
+by the network library (\*ilibnet\*r(3)), and \*i/etc/net/hostmap.bin\*r
+is a binary version of it,
+which is maintained by
+.I mkhost(1)
+and
+.I prhost(1),
+interrogated by
+.I host(1)
+and
+.I net(1)
+and
+used by many functions in the network library.
+.PP
+\*iHostmap\*r consists of a number of network and host entries,
+each on one line.
+Lines are logically terminated by semicolons;
+subsequent text is treated as commentary and is ignored.
+.PP
+Each entry is a type designator, followed by a name,
+followed by a number.  The number can be followed by a list of more
+names (aliases).  White space (spaces and tabs) separates the type
+designator, the names, and the number.
+The type designator is one of \*(OQnet\*(CQ or \*(OQhost\*(CQ,
+indicating that the entry
+maps a network name (or names) to a network number, or a host name
+(or names) to a host number.
+The \*(OQhost\*(CQ designator is optional and is usually omitted.
+.PP
+Upper or lower case may be used.
+Internally, all information is stored in lower case.
+.PP
+Each name may consist of a non-null sequence of the following characters:
+.nf
+.sp
+	the letters \*(APa\*(AP through \*(APz\*(AP
+	the digits \*(AP0\*(AP through \*(AP9\*(AP
+	the dash \*(AP-\*(AP
+.sp
+.fi
+A name cannot be longer than 24 characters.
+.PP
+Each network entry appears as
+.nf
+.sp
+	\*bnet\*i	name	number[,capability] [nickname ...]\*r
+.sp
+.fi
+A network number is a small, non-negative, decimal integer.
+The capability is optional and is a new addition to the host map.
+It is a sixteen bit quantity and may be expressed in octal or decimal.
+Currently, only the low octal digit (i.e., low three bits) is used
+to indicate the addressing format for the network.
+The value 0 indicates normal
+.I hoi/imp
+notation.
+One (01) indicates CHAOS style octal addresses
+and
+two (02) signifies dialup hosts.
+If the capability is omitted, zero is used.
+.PP
+The host entries appear as
+.nf
+.sp
+	[\*bhost\*r] \*iname address,network[,capability] [nickname ...]\*r
+.sp
+.fi
+The
+.I address
+is expected to be in the standard
+.I hoi/imp
+notation or
+(see the description of network addressing formats above)
+may be a single octal or decimal number
+or a string of dial digits (up to 24 may be stored).
+.I Network
+may be either a network name
+(which must have previously appeared in a network entry)
+or a number.
+The capability is also a sixteen bit quantity.
+Currently, no meaning has been assigned to it.
+.PP
+The first host entry should be:
+.nf
+.sp
+	anyhost 0/0,0
+.sp
+.fi
+The official name for a host must be the initial name in the first
+entry for the host number.
+.PP
+Host numbers which correspond to IMP ports which are shared between more
+than one actual host have the official name for one of the hosts entered
+as an alias.
+.PP
+The format of \*ihostmap.bin\*r is:
+.PP
+A header of four words which contain
+the number of network entries,
+the number of host entries,
+the number of characters used to store network and host names
+and the number of characters used to store dial digits.
+Following this are the tables themselves, appearing in the same order
+as their respective counts.
+.PP
+Each network entry contains
+the index (into the string buffer)
+of its primary and alias names,
+its capability word,
+the index of the next network in the list
+(for searching),
+the index into the host table of the first host on the network
+and the number of known hosts on the network.
+.PP
+The host entries are ordered by network.
+Each contains
+an index to the primary and alias names,
+the binary host address
+and its capability word.
+.PP
+The names are organized into a string table.
+Each network or host entry contains
+an index
+into this table, which is the index of the first
+character of the primary name.
+Aliases follow the primary.
+Each name is terminated with a NUL byte
+and each list is terminated by a NUL (i.e., empty) string.
+.PP
+Dial digits are stored as NUL-terminated strings,
+the index of which is encoded into the host address.
+.SH FILES
+.nf
+/etc/net/hostmap	ascii host map
+/etc/net/hostmap.bin	binary host map
+/etc/net/hostmap.bin~	backup of binary
+.fi
+.SH "SEE ALSO"
+host(1), net(1), mkhost(1), prhost(1), libnet(3)

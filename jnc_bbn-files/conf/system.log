@@ -1,0 +1,86 @@
+rm: No such file or directory. ldken
+rm: No such file or directory. libdmr
+Compiling ken
+alloc.c:
+awaitr.c:
+clock.c:
+fio.c:
+iget.c:
+main.c:
+malloc.c:
+map_page.c:
+nami.c:
+pipe.c:
+prf.c:
+proc_util.c:
+rdwri.c:
+set_lcba.c:
+sig.c:
+slp.c:
+subr.c:
+sys1.c:
+sys2.c:
+sys3.c:
+sys4.c:
+sysent.c:
+table.c:
+text.c:
+trap.c:
+Loading ken
+m40.s
+u 0854
+u 0857
+u 0857
+compiling dmr
+rm: No such file or directory. libdmr
+bio.c:
+mem.c:
+kl.c:
+partab.c:
+rk.c:
+tty.c:
+pty.c:
+imp11a.c:
+ports.c:
+archiving dmr
+Loading
+Undefined:
+_htintr
+_hpintr
+_dzrint
+_dzxint
+_i11a_ii
+_i11a_oi
+_dhrint
+_dhxint
+_dmint
+_gnint
+_end
+_edata
+_klttyen
+_portenb
+_ptcenb
+_ptsenb
+_klttydi
+_portdis
+_ptcdis
+_ptsdis
+_nport
+_table
+_modtty
+
+
+
+File a.out
+Non-sharable
+  Text: 31574   Data: 1662    Bss: 14       (decimal bytes)
+  Text: 75526   Data: 3176    Bss: 16       (octal bytes)
+
+Undefined Global Symbols...
+    _modtty 0        _table 0        _nport 0       _ptsdis 0     
+    _ptcdis 0      _portdis 0      _klttydi 0       _ptsenb 0     
+    _ptcenb 0      _portenb 0      _klttyen 0        _edata 0     
+       _end 0        _gnint 0        _dmint 0       _dhxint 0     
+    _dhrint 0      _i11a_oi 0      _i11a_ii 0       _dzxint 0     
+    _dzrint 0       _hpintr 0       _htintr 0     
+Done - output is ../unix

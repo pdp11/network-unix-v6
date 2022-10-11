@@ -1,0 +1,14 @@
+
+This directory was not on the original beta distribution
+tape. It contains a more developed version of the
+networking kernel, presumably from October 1982 (one year
+later than the tape). This version has support for UDP and
+several bug fixes; it would have been the version used
+on 'flag day'.
+
+These files were found in the online archives of the
+Stanford AI Laboratory (SAIL):
+https://www.saildart.org/[IP,SYS]/
+The files are mixed in with what looks like the TCP/IP
+implementation for WAITS, where it may have been used
+as a reference.

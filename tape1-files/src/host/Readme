@@ -1,0 +1,8 @@
+The programs "dumpmap" and "loadmap" are not intended for public consumption.
+
+dumpmap produces an ascii dump of the binary map and was written during
+	debugging of the new library.
+
+loadmap just loads and unloads the network map 100 times.  It may be used
+	to determine how much time these functions consume.
+	(E.g., time loadmap)
