@@ -1,0 +1,32 @@
+BBN TCP Vax-Unix
+
+By 1979 the basic TCP/IP specification had been finalised and in
+1980 the US Department of Defence decided to make it its standard
+inter-networking protocol; Arpanet users were directed to switch over
+from NCP to TCP/IP on January 1st 1983 ('flag day'). A good half dozen
+interoperable research implementations existed (for an example see
+BBN-V6 http://minnie.tuhs.org/cgi-bin/utree.pl?file=BBN-V6/tcp), but no
+production quality reference implementation. DARPA contracted with BBN
+to write such a reference implementation for 4BSD Unix.
+
+In January 1981 the design was ready (documented in IEN168
+https://www.rfc-editor.org/ien/ien168.txt) and coding proceeded. In
+parallel several loose ends in the TCP/IP specifications were tied in
+(for example, ICMP replaced GGP as the control message protocol) and
+these specification changes were back integrated into the code base. In
+November 1981 a beta distribution tape that overlaid on 4.1BSD was
+ready. The network API was very similar to that of the earlier NCP Unix
+(see SRI-NOSC http://minnie.tuhs.org/cgi-bin/utree.pl?file=SRI-NOSC). With
+DARPA funding, the code was further developed and maintained into the
+early 90’s.
+
+Next to networking extensions to the kernel, the beta distribution tape
+contains several user programs such as clients and servers for Telnet
+and FTP. It also contains a mail system based on a precursor to SMTP,
+called MTP https://tools.ietf.org/html/rfc772. MTP shows the transition
+of mail from a feature of FTP to an independent protocol.
+
+Separately, DARPA contracted in 1981 with Berkeley’s CSRG to develop
+4.2BSD and to integrate this reference implementation with it. As such,
+it became the starting point for 4.1a BSD. This beta distribution tape
+comes from the CSRG archives.

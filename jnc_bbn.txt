@@ -1,0 +1,33 @@
+BBN PDP-11 V6 Unix with C TCP/IP
+(from Noel Chiappa)
+
+  This is an early TCP/IP Unix system written at BBN. It was not the
+  first TCP/IP Unix; that was one done at BBN in MACRO-11, based
+  on a TCP done in MACRO-11 by Jim Mathis at SRI for the TIU (Terminal
+  Interface Unit).
+
+  This networking code is divided into three main groups. First there is
+  code for the kernel, which includes IPC enhancements to Unix, including
+  Rand ports, as well as further extensions to that done at BBN for the
+  earlier TCP - the capac() and await() calls. It also includes a IMP
+  interface driver (the code only interfaced to the ARPANET at this point in
+  time). Next, TCP is implemented as a daemon which ran as a single process
+  which handled all the connections. Finally, other programs implement
+  applications; TELNET is the only one provided at this point in time.
+
+  A modest amount of documentation is available in the 'doc' directory;
+  included are the original NROFF source to the two Rand publications
+  about ports, and several BBN reports.
+
+  The original port code was written by Steven Zucker at Rand; the extensions
+  done at BBN were by Jack Haverty. The TCP was mostly written by Mike
+  Wingfield, apparently with some assistance by Jon Dreyer. Dan Franklin
+  apparently  wrote the TELNET.
+
+  For more information about this system, see:
+  - "Interprocess Communication Extensions for the UNIX Operating System:
+  I - Design Considerations", Rand Corporation, Report R-2064/1-AF, June 1977.
+  - "Interprocess Communication Extensions for the UNIX Operating System:
+  II - Implementation", Rand Corporation, Report  R-2064/2-PR, April 1977.
+  - "UNIX TCP User's Guide", Bolt Beranek and Newman Inc., Report No. 3724
+
